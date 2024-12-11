@@ -116,6 +116,7 @@ router.get('/userAccountDetails', protect, async (req, res) => {
         username: req.user.username,
         email: req.user.email,
         fullName: req.user.fullName,
+        profilePicture: req.user.profilePicture,
       },
       reservedAccount: {
         accountReference: reservedAccount.accountReference,

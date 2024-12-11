@@ -75,6 +75,8 @@ router.post('/register', async (req, res) => {
     const accountReference = `REF-${Date.now()}`;
     const accountName = fullName;
 
+    console.log(accountName, "1")
+
     const requestData = {
       accountReference,
       accountName,
@@ -99,6 +101,9 @@ router.post('/register', async (req, res) => {
       );
 
       const reservedAccountDetails = response.data.responseBody;
+
+      console.log(requestData, "requestData")
+      console.log(response.data.responseBody, "responseBody")
 
 
       // Save reserved account details to database
