@@ -149,6 +149,7 @@ router.get('/seller/:id/account', async (req, res) => {
     res.json({
       sellerAcctNumber: sellerAccount.accounts[0].accountNumber,
       sellerAcctName: sellerAccount.accountName,
+      sellerAcctName: sellerAccount.customerName,
       sellerAcctBank: sellerAccount.accounts[0].bankName,
       sellerAcctCode: sellerAccount.accounts[0].bankCode,
     });
