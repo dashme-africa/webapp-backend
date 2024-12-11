@@ -148,7 +148,6 @@ router.get('/seller/:id/account', async (req, res) => {
     // Send back the seller account details (account number, name, and code)
     res.json({
       sellerAcctNumber: sellerAccount.accounts[0].accountNumber,
-      sellerAcctName: sellerAccount.accountName,
       sellerAcctName: sellerAccount.customerName,
       sellerAcctBank: sellerAccount.accounts[0].bankName,
       sellerAcctCode: sellerAccount.accounts[0].bankCode,
