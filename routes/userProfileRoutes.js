@@ -22,25 +22,6 @@ router.get('/profile', protect, async (req, res) => {
   res.json(req.user);
 });
 
-// router.put('/profile', protect, async (req, res) => {
-//   try {
-//     const { fullName, lastName, username, email, address, bio } = req.body;
-
-//     console.log(req.body)
-
-//     const updatedUser = await User.findByIdAndUpdate(
-//       req.user._id,
-//       { fullName: fullName, lastname: lastName, username, email, address, bio },
-//       { new: true }
-//     );
-
-//     console.log(updatedUser)
-//     res.status(200).json(updatedUser);
-//   } catch (error) {
-//     console.error('Error updating profile:', error.message);
-//     res.status(500).json({ message: 'Internal server error' });
-//   }
-// });
 
 router.put('/profile', protect, upload.single('image'), async (req, res) => {
   try {

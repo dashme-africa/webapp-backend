@@ -133,7 +133,7 @@ router.post('/donate', upload.single('image'), async (req, res) => {
       category,
       image: imageUrl,
       location,
-      tag: 'donate', 
+      tag: 'donate',
       uploader, // Add the uploader ID
       availability: true, // Default to available
     });
