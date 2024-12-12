@@ -316,7 +316,7 @@ router.post('/initiate-payment', async (req, res) => {
             customerPhone: phoneNumber,
             contractCode: MONNIFY_CONTRACT_CODE,
             paymentReference,
-            redirectUrl: 'http://localhost:5173/verify-payment',
+            redirectUrl: 'http://localhost:5173/payment-page',
         };
 
         const response = await axios.post(
