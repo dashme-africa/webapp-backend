@@ -5,8 +5,6 @@ const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 
-// const ReservedAccount = require('./models/ReservedAccount');
-
 const productRoutes = require('./routes/productRoutes');
 const userRoutes = require('./routes/userRoutes');
 const userProfileRoutes = require('./routes/userProfileRoutes');
@@ -22,17 +20,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Monnify API credentials from .env
-const MONNIFY_API_KEY = process.env.MONNIFY_API_KEY;
-const MONNIFY_SECRET_KEY = process.env.MONNIFY_SECRET_KEY;
-const MONNIFY_CONTRACT_CODE = process.env.MONNIFY_CONTRACT_CODE;
-const MONNIFY_BASE_URL = process.env.MONNIFY_BASE_URL || 'https://sandbox.monnify.com'; // Use `https://api.monnify.com` for production
-const GOSHIIP_BASE_URL = 'https://delivery-staging.apiideraos.com/api/v2';
-const AUTH_TOKEN = 'Bearer <Your_Secret_Key>'; // Replace with your actual GoShiip API key
-
-
 const PORT = process.env.PORT || 5000;
-
 
 // CORS Configuration
 const allowedOrigins = [
@@ -81,32 +69,6 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/myProducts', myProductRoutes);
 
 
-// Function to get Monnify Bearer Token
-const getMonnifyToken = async () => {
-  try {
-      const credentials = `${MONNIFY_API_KEY}:${MONNIFY_SECRET_KEY}`;
-      const base64Credentials = Buffer.from(credentials).toString('base64');
-
-      const response = await axios.post(
-          `${MONNIFY_BASE_URL}/api/v1/auth/login`,
-          {},
-          {
-              headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Basic ${base64Credentials}`,
-              },
-          }
-      );
-
-      return response.data.responseBody.accessToken;
-  } catch (error) {
-      console.error('Error fetching Monnify token:', error.response?.data || error.message);
-      throw new Error('Failed to fetch Monnify token');
-  }
-};
-
-
-
 // Replace with your API secret key
 const API_SECRET_KEY = "ssk_01ff6a285121b16938b542dbe5b0ca89042f628de23c2baa358269f0297eda30";
 
@@ -115,7 +77,7 @@ const BASE_URL = "https://delivery-staging.apiideraos.com/api/v2/token";
 
 // Get available couriers based on type
 app.get("/api/couriers", async (req, res) => {
-  const { type } = req.query; // e.g., interstate, intrastate, international
+  const { type } = req.query;
 
   if (!type) {
     return res.status(400).json({ error: "Type query parameter is required." });
@@ -124,7 +86,7 @@ app.get("/api/couriers", async (req, res) => {
   try {
     const response = await axios.get(`${BASE_URL}/shipments/courier-partners/`, {
       headers: { Authorization: `Bearer ${API_SECRET_KEY}` },
-      params: { type }, // Axios automatically adds the query parameters
+      params: { type },
     });
 
     res.status(200).json(response.data);
@@ -174,87 +136,6 @@ app.post("/api/rates", async (req, res) => {
   }
 });
 
-
-
-
-
-
-// Endpoint to get available couriers
-// app.get('/api/getAvailableCouriers', async (req, res) => {
-//   const { type } = req.query;  // Get the type from the query params
-
-//   if (!type) {
-//       return res.status(400).json({ message: 'The type field is required.' });
-//   }
-
-//   try {
-//       const response = await axios.get(
-//           `${GOSHIIP_BASE_URL}/token/shipments/courier-partners`,
-//           {
-//               params: { type },
-//               headers: {
-//                   'Authorization': AUTH_TOKEN,
-//               },
-//           }
-//       );
-//       res.status(200).send(response.data);  // Send the couriers list back to the frontend
-//   } catch (error) {
-//       console.error('Error fetching couriers:', error.response?.data || error.message);
-//       res.status(500).send(error.response?.data || { message: 'Internal Server Error' });
-//   }
-// });
-
-// // Endpoint to get rates from GoShiip
-// app.post('/api/getRate', async (req, res) => {
-//   try {
-//       const { carrierName, payload } = req.body;
-
-//       const response = await axios.post(
-//           `${GOSHIIP_BASE_URL}/token/tariffs/getpricesingle/${carrierName}`,
-//           payload,
-//           {
-//               headers: {
-//                   'Content-Type': 'application/json',
-//                   Authorization: AUTH_TOKEN,
-//               },
-//           }
-//       );
-
-//       res.status(200).send(response.data);
-//   } catch (error) {
-//       console.error('Error fetching rate:', error.response?.data || error.message);
-//       res.status(500).send(error.response?.data || { message: 'Internal Server Error' });
-//   }
-// });
-
-// // Endpoint to get shipment rates
-// app.post('/api/get-shipment-rates', async (req, res) => {
-//   const { type, toAddress, fromAddress, parcels, items } = req.body;
-
-//   try {
-//     const response = await axios.post(
-//       'https://delivery-staging.apiideraos.com/api/v2/token/tariffs/allprice',
-//       {
-//         type,
-//         toAddress,
-//         fromAddress,
-//         parcels,
-//         items
-//       },
-//       {
-//         headers: {
-//           'Authorization': 'Bearer Secret Key',  // Replace with your actual API key
-//           'Content-Type': 'application/json'
-//         }
-//       }
-//     );
-
-//     res.json(response.data);  // Send the shipment rates to the frontend
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: 'Failed to fetch shipment rates' });
-//   }
-// });
 
 // Start Server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

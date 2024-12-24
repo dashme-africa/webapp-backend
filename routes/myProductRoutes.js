@@ -18,7 +18,7 @@ cloudinary.config({
 
 router.get('/', async (req, res) => {
   const { uploader } = req.query;
-  console.log("Uploader Query Param:", uploader); // Add this line
+  // console.log("Uploader Query Param:", uploader); // Add this line
 
   if (!uploader) {
     return res.status(400).json({ message: 'Uploader ID is required' });

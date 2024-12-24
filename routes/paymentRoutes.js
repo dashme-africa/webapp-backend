@@ -1,262 +1,260 @@
-const express = require('express');
-const router = express.Router();
+// const express = require("express");
+// const dotenv = require("dotenv");
+// const User = require('../models/User');
+// const mongoose = require('mongoose');
+
+
+// dotenv.config();
+
+// const router = express.Router();
+
+
+// router.get('/seller/:sellerId/bank-details', async (req, res) => {
+//     const { sellerId } = req.params;
+
+//     console.log(`Fetching bank details for sellerId: ${sellerId}`);
+
+//     try {
+//         const objectId = new mongoose.Types.ObjectId(sellerId);
+
+//         const seller = await User.findOne({ _id: objectId });
+
+//         if (!seller) {
+//             console.log('Seller not found.');
+//             return res.status(404).send({ error: 'Seller not found.' });
+//         }
+
+//         console.log(`Seller found: ${seller}`);
+
+//         const { bankName, accountNumber, accountName } = seller;
+
+//         if (!bankName || !accountNumber || !accountName) {
+//             return res
+//                 .status(400)
+//                 .send({ error: 'Incomplete bank details for the seller.' });
+//         }
+
+//         res.status(200).send({ bankName, accountNumber, accountName });
+//     } catch (err) {
+//         console.error('Error fetching bank details:', err);
+//         res.status(500).send({ error: 'Error retrieving bank details.' });
+//     }
+// });
+
+// const axios = require('axios');
+
+// router.post('/subaccount', async (req, res) => {
+//   const { businessName, bankCode, accountNumber, percentageCharge } = req.body;
+
+//   console.log(req.body)
+
+//   try {
+//     const response = await axios.post(
+//       'https://api.paystack.co/subaccount',
+//       {
+//         business_name: businessName,
+//         bank_code: bankCode,
+//         account_number: accountNumber,
+//         percentage_charge: percentageCharge,
+//       },
+//       {
+//         headers: {
+//           Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+//           'Content-Type': 'application/json',
+//         },
+//       }
+//     );
+//     res.status(201).json(response.data);
+//   } catch (error) {
+//     console.error('Error creating subaccount:', error.response?.data || error.message);
+//     res.status(500).json({ message: 'Failed to create subaccount' });
+//   }
+// });
+
+// router.post('/initialize-transaction', async (req, res) => {
+//     const { email, amount, subaccount, transactionCharge, bearer } = req.body;
+//     console.log("Initialize", req.body)
+  
+//     try {
+//       const response = await axios.post(
+//         'https://api.paystack.co/transaction/initialize',
+//         {
+//           email,
+//           amount,
+//           subaccount,
+//           transaction_charge: transactionCharge || undefined,
+//           bearer: bearer || 'account', // Optional: specify bearer
+//         },
+//         {
+//           headers: {
+//             Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+//             'Content-Type': 'application/json',
+//           },
+//         }
+//       );
+//       res.status(201).json(response.data);
+//     } catch (error) {
+//       console.error('Error initializing transaction:', error.response?.data || error.message);
+//       res.status(500).json({ message: 'Failed to initialize transaction' });
+//     }
+//   });
+
+  
+
+// module.exports = router;
+
+
+const express = require("express");
+const dotenv = require("dotenv");
+const User = require('../models/User');
+const mongoose = require('mongoose');
 const axios = require('axios');
-const dotenv = require('dotenv');
-const Transaction = require('../models/Transaction'); // Ensure the model is correctly defined and imported
 
 dotenv.config();
 
-// Monnify API credentials
-const MONNIFY_API_KEY = process.env.MONNIFY_API_KEY;
-const MONNIFY_SECRET_KEY = process.env.MONNIFY_SECRET_KEY;
-const MONNIFY_CONTRACT_CODE = process.env.MONNIFY_CONTRACT_CODE;
-const MONNIFY_BASE_URL = process.env.MONNIFY_BASE_URL || 'https://sandbox.monnify.com';
+const router = express.Router();
 
-// Function to get Monnify Bearer Token
-const getMonnifyToken = async () => {
-    try {
-        const credentials = `${MONNIFY_API_KEY}:${MONNIFY_SECRET_KEY}`;
-        const base64Credentials = Buffer.from(credentials).toString('base64');
+// Cached bank list
+let cachedBanks = [];
 
-        const response = await axios.post(
-            `${MONNIFY_BASE_URL}/api/v1/auth/login`,
-            {},
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Basic ${base64Credentials}`,
-                },
-            }
-        );
-
-        return response.data.responseBody.accessToken;
-    } catch (error) {
-        console.error('Error fetching Monnify token:', error.response?.data || error.message);
-        throw new Error('Failed to fetch Monnify token');
-    }
+// Fetch bank list and cache it
+const fetchBanks = async () => {
+  try {
+    const response = await axios.get('https://api.paystack.co/bank', {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
+    });
+    cachedBanks = response.data.data || []; // Cache the bank list
+    // console.log("Banks fetched successfully:", cachedBanks.length);
+  } catch (error) {
+    console.error("Error fetching bank list:", error.message);
+  }
 };
 
-// Route: Initiate Payment
-router.post('/initiate-payment', async (req, res) => {
-    const { amount, email, phoneNumber, paymentReference } = req.body;
+// Load bank list on server start
+fetchBanks();
 
-    if (!amount || !email || !phoneNumber || !paymentReference) {
-        return res.status(400).json({ success: false, message: 'All fields are required' });
+// Route to get seller bank details
+router.get('/seller/:sellerId/bank-details', async (req, res) => {
+  const { sellerId } = req.params;
+
+//   console.log(`Fetching bank details for sellerId: ${sellerId}`);
+
+  try {
+    const objectId = new mongoose.Types.ObjectId(sellerId);
+
+    const seller = await User.findOne({ _id: objectId });
+
+    if (!seller) {
+    //   console.log('Seller not found.');
+      return res.status(404).send({ error: 'Seller not found.' });
     }
 
+    // console.log(`Seller found: ${seller}`);
+
+    const { bankName, accountNumber, accountName } = seller;
+
+    if (!bankName || !accountNumber || !accountName) {
+      return res
+        .status(400)
+        .send({ error: 'Incomplete bank details for the seller.' });
+    }
+
+    res.status(200).send({ bankName, accountNumber, accountName });
+  } catch (err) {
+    console.error('Error fetching bank details:', err);
+    res.status(500).send({ error: 'Error retrieving bank details.' });
+  }
+});
+
+// Route to create a subaccount
+router.post('/subaccount', async (req, res) => {
+  const { businessName, bankName, accountNumber, percentageCharge } = req.body;
+
+  console.log(req.body);
+
+  try {
+    // Ensure the bank list is available
+    if (!cachedBanks.length) {
+    //   console.log("Bank list not available, fetching...");
+      await fetchBanks();
+    }
+
+    // Find the bank code for the given bank name
+    const bank = cachedBanks.find(
+      (b) => b.name.toLowerCase() === bankName.toLowerCase()
+    );
+
+    if (!bank) {
+      return res.status(404).json({ message: 'Bank not found. Please check the bank name.' });
+    }
+
+    const bankCode = bank.code;
+
+    // Create subaccount
+    const response = await axios.post(
+      'https://api.paystack.co/subaccount',
+      {
+        business_name: businessName,
+        bank_code: bankCode,
+        account_number: accountNumber,
+        percentage_charge: percentageCharge,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    res.status(201).json(response.data);
+  } catch (error) {
+    console.error('Error creating subaccount:', error.response?.data || error.message);
+    res.status(500).json({ message: 'Failed to create subaccount', error: error.response?.data });
+  }
+});
+
+// Route to initialize transaction
+router.post('/initialize-transaction', async (req, res) => {
+    const { email, amount, sellerSubaccount } = req.body;
+
+    console.log("Initialize Transaction Request:", req.body);
+  
     try {
-        const token = await getMonnifyToken();
-        const paymentData = {
-            amount,
-            currencyCode: 'NGN',
-            customerName: email,
-            customerEmail: email,
-            customerPhone: phoneNumber,
-            contractCode: MONNIFY_CONTRACT_CODE,
-            paymentReference,
-            redirectUrl: 'http://localhost:5173/payment-page',
-        };
-
-        const response = await axios.post(
-            `${MONNIFY_BASE_URL}/api/v1/merchant/transactions/init-transaction`,
-            paymentData,
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            }
-        );
-
-
-        const transactionReference = response.data.responseBody?.transactionReference;
-        const paymentLink = response.data.responseBody?.checkoutUrl;
-
-        if (paymentLink) {
-            return res.status(200).json({
-                success: true,
-                paymentLink,
-                transactionReference,
-            });
-        } else {
-            return res.status(500).json({ success: false, message: 'Payment initiation failed' });
+      // Ensure all required fields are provided
+      if (!email || !amount || !sellerSubaccount) {
+        return res.status(400).json({ message: "Required fields are missing: email, amount, sellerSubaccount" });
+      }
+  
+      // Transaction split logic
+      const response = await axios.post(
+        'https://api.paystack.co/transaction/initialize',
+        {
+          email, // Buyer's email
+          amount, // Total amount (in kobo, so multiply Naira by 100)
+          subaccount: sellerSubaccount, // Seller's Paystack subaccount
+          transaction_charge: Math.floor((20 / 100) * amount), // Platform's 20% charge
+          bearer: 'subaccount', // Ensures seller bears the transaction charge
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json',
+          },
         }
+      );
+  
+      console.log("Transaction initialized successfully:", response.data);
+      res.status(201).json(response.data);
     } catch (error) {
-        console.error('Error during payment initiation:', error.response?.data || error.message);
-        res.status(500).json({ success: false, message: 'An error occurred during payment initiation' });
+      console.error('Error initializing transaction:', error.response?.data || error.message);
+      res.status(500).json({ 
+        message: 'Failed to initialize transaction', 
+        error: error.response?.data || error.message 
+      });
     }
-});
-
-
-// Function to disburse funds to the seller
-const disburseFunds = async ({ amount, bankCode, accountNumber, accountName, narration, reference }) => {
-    try {
-        const token = await getMonnifyToken(); // Get Bearer Token
-
-        const response = await axios.post(
-            `${MONNIFY_BASE_URL}/api/v2/disbursements/single`,
-            {
-                amount,
-                reference,
-                narration,
-                destinationBankCode: bankCode,
-                destinationAccountNumber: accountNumber,
-                currency: "NGN", // Fixed to Nigerian Naira
-                sourceAccountNumber: '3655292498',
-                destinationAccountName: accountName,
-            },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        return response.data;
-    } catch (error) {
-        console.error('Error disbursing funds:', error.response?.data || error.message);
-        throw new Error('Failed to disburse funds');
-    }
-};
-
-
-
-// Function to get the status of a disbursement
-const getDisbursementStatus = async (reference) => {
-    try {
-        const token = await getMonnifyToken(); // Get Bearer Token
-
-        const response = await axios.get(
-            `${MONNIFY_BASE_URL}/api/v2/disbursements/single/summary?reference=${reference}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching disbursement status:', error.response?.data || error.message);
-        throw new Error('Failed to fetch disbursement status');
-    }
-};
-
-// Route: Verify Payment and Disburse Funds
-router.post('/verify-payment', async (req, res) => {
-    const { paymentReference, sellerAccount } = req.body;
-    const { accountNumber, accountName, accountCode } = sellerAccount;
-
-    if (!paymentReference || !sellerAccount) {
-        return res.status(400).json({
-            success: false,
-            message: 'Transaction reference and seller account details are required.',
-        });
-    }
-
-    try {
-        const token = await getMonnifyToken();
-
-        // Step 1: Verify Payment Status
-        const response = await axios.get(
-            `${MONNIFY_BASE_URL}/api/v2/merchant/transactions/query?paymentReference=${paymentReference}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        console.log("Verify payment data", response.data)
-        const paymentDetails = response.data.responseBody;
-        const paymentStatus = paymentDetails.paymentStatus;
-        const amountPaid = paymentDetails.amountPaid;
-
-        if (paymentStatus === 'PAID') {
-            // Step 2: Calculate Disbursement Amount
-            const disbursementAmount = (0.8 * amountPaid).toFixed(2);
-            const disbursementReference = `${Date.now()}`;
-
-            // Step 3: Disburse Funds to Seller
-            const sellerNarration = `Disbursement from Dashme Africa. Payment Reference: ${disbursementReference}`;
-            const disbursementResponse = await disburseFunds({
-                amount: disbursementAmount,
-                bankCode: accountCode,
-                accountName,
-                accountNumber,
-                narration: sellerNarration,
-                reference: disbursementReference,
-            });
-
-            console.log("Disbursed data", disbursementResponse)
-
-            if (disbursementResponse.requestSuccessful) {
-                // Step 4: Verify Disbursement Status
-                const disbursementStatusResponse = await getDisbursementStatus(disbursementReference);
-                console.log(disbursementStatusResponse.responseBody)
-
-                if (disbursementStatusResponse.responseBody.status === 'SUCCESS') {
-                    return res.status(200).json({
-                        success: true,
-                        message: 'Payment verified, funds disbursed, and disbursement confirmed successfully.',
-                        disbursementDetails: disbursementStatusResponse.responseBody,
-                    });
-                } else {
-                    return res.status(200).json({
-                        success: true,
-                        message: 'Payment verified and funds disbursed, but disbursement confirmation is pending.',
-                        disbursementStatus: disbursementStatusResponse.responseBody,
-                    });
-                }
-            } else {
-                return res.status(500).json({
-                    success: false,
-                    message: 'Payment verified, but failed to disburse funds.',
-                });
-            }
-        } else {
-            return res.status(400).json({
-                success: false,
-                message: 'Payment not successful.',
-            });
-        }
-    } catch (error) {
-        console.error('Error during payment and disbursement process:', error.response?.data || error.message);
-        return res.status(500).json({
-            success: false,
-            message: 'Error during payment and disbursement process.',
-        });
-    }
-});
-
-
-router.post('/authorize-transfer', async (req, res) => {
-    const { reference, otp } = req.body;
-
-    console.log(req.body)
-
-    if (!reference || !otp) {
-        return res.status(400).json({ responseMessage: 'Reference and OTP are required' });
-    }
-
-    const token = await getMonnifyToken();
-
-    try {
-        const response = await axios.post(
-            `${MONNIFY_BASE_URL}/api/v2/disbursements/single/validate-otp`,
-            {
-                reference,
-                authorizationCode: otp,
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            }
-        );
-
-        console.log(response.data)
-        res.status(200).json(response.data);
-    } catch (error) {
-        console.log(error)
-
-        res.status(500).json(
-            error.response
-                ? error.response.data
-                : { responseMessage: 'An error occurred while authorizing the transfer' }
-        );
-    }
-});
-
-
+  });
+  
 
 module.exports = router;
