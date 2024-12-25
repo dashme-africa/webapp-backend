@@ -5,15 +5,17 @@ const { protectAdmin } = require('../middleware/adminMiddleware');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
-// Cloudinary Configuration (Make sure your .env file is set up)
+require('dotenv').config();
+
+// Cloudinary Configuration
 cloudinary.config({
-  cloud_name: "df2q6gyuq",
-  api_key: "259936754944698",
-  api_secret: "bTfV4_taJPd1zxxk1KJADTL8JdU",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Multer memory storage (since we're uploading to Cloudinary)
-const storage = multer.memoryStorage(); // Store file in memory
+// Multer memory storage
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // @desc Get all products
@@ -43,7 +45,6 @@ router.get('/:id', protectAdmin, async (req, res) => {
   }
 });
 
-
 // @desc Delete a product
 // @route DELETE /api/admin/products/:id
 // @access Private (Admin)
@@ -62,7 +63,6 @@ router.delete('/:id', protectAdmin, async (req, res) => {
     res.status(500).json({ message: 'Failed to delete product', error: error.message });
   }
 });
-
 
 // @desc Update a product
 // @route PUT /api/admin/products/:id
@@ -127,7 +127,5 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     res.status(500).json({ message: 'Failed to update product', error: error.message });
   }
 });
-
-
 
 module.exports = router;

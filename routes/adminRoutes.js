@@ -4,8 +4,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 
-// Generate JWT Token
-const generateToken = (id) => jwt.sign({ id }, "hello", { expiresIn: '30d' });
+require('dotenv').config();
+
+// Generate a JWT
+const generateToken = (id) => {
+return jwt.sign({ id }, process.env.ADMIN_TOKEN_SECRET_KEY, { expiresIn: '30d' });
+};
 
 // Admin Login Route
 router.post('/login', async (req, res) => {
@@ -56,6 +60,5 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
 
 module.exports = router;

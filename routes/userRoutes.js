@@ -1,17 +1,15 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const ReservedAccount = require('../models/ReservedAccount');
-const axios = require('axios');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
+require('dotenv').config();
 
 // Generate a JWT
 const generateToken = (id) => {
-  return jwt.sign({ id }, "hello", { expiresIn: '30d' });
+return jwt.sign({ id }, process.env.TOKEN_SECRET_KEY, { expiresIn: '30d' });
 };
-
 
 // User registration with Monnify reserved account creation
 // @desc Register a new user
@@ -30,14 +28,12 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ message: 'User already exists.' });
   }
 
-
   const newUser = new User({
     fullName,
     username,
     email,
     password,
   });
-
 
   res.status(201).json({
     success: true,
@@ -47,7 +43,6 @@ router.post('/register', async (req, res) => {
   console.error('Error during registration:', error.message);
   res.status(500).json({ message: 'Internal Server Error' });
 });
-
 
 // @desc Authenticate user
 // @route POST /api/users/login

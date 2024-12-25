@@ -1,21 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const ReservedAccount = require('../models/ReservedAccount');
 const User = require('../models/User');
 const multer = require('multer');
 const streamifier = require('streamifier');
-const cloudinary = require('cloudinary').v2; // Ensure Cloudinary is properly configured.
+const cloudinary = require('cloudinary').v2;
 const axios = require('axios');
 
+require('dotenv').config();
 
-const upload = multer(); // Use memory storage for uploaded files.
+const upload = multer();
 
-// Cloudinary Configuration (Make sure your .env file is set up)
+// Cloudinary Configuration
 cloudinary.config({
-  cloud_name: "df2q6gyuq",
-  api_key: "259936754944698",
-  api_secret: "bTfV4_taJPd1zxxk1KJADTL8JdU",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 // Example: Protected Profile Route
@@ -23,7 +23,6 @@ router.get('/profile', protect, async (req, res) => {
   // console.log(req.user)
   res.json(req.user);
 });
-
 
 router.put('/profile', protect, upload.single('image'), async (req, res) => {
   try {
@@ -155,63 +154,6 @@ router.get('/resolve-account', async (req, res) => {
   } catch (error) {
     console.error("Error resolving account:", error.message, error.response?.data); // Debugging
     res.status(error.response?.status || 500).json({ error: error.response?.data || 'Server error' });
-  }
-});
-
-// Endpoint to get user details along with their reserved account details
-router.get('/userAccountDetails', protect, async (req, res) => {
-  try {
-    // Fetch the user's reserved account details using their userId
-    const reservedAccount = await ReservedAccount.findOne({ userId: req.user._id }).populate('userId');
-
-    if (!reservedAccount) {
-      return res.status(404).json({ message: 'Reserved account not found for this user' });
-    }
-
-    res.status(200).json({
-      user: {
-        username: req.user.username,
-        email: req.user.email,
-        fullName: req.user.fullName,
-        profilePicture: req.user.profilePicture,
-      },
-      reservedAccount: {
-        accountReference: reservedAccount.accountReference,
-        accountName: reservedAccount.accountName,
-        customerEmail: reservedAccount.customerEmail,
-        balance: reservedAccount.balance,
-        accounts: reservedAccount.accounts,
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching user and account details:', error.message);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Route to get seller account details by seller ID
-router.get('/seller/:id/account', async (req, res) => {
-  const { id } = req.params; // Extract the seller ID from the route parameter
-
-  try {
-    // Find the seller's account details from the ReservedAccount model
-    const sellerAccount = await ReservedAccount.findOne({ userId: id });
-
-    if (!sellerAccount) {
-      return res.status(404).json({ message: "Seller account not found." });
-    }
-
-    // console.log(sellerAccount)
-    // Send back the seller account details (account number, name, and code)
-    res.json({
-      sellerAcctNumber: sellerAccount.accounts[0].accountNumber,
-      sellerAcctName: sellerAccount.customerName,
-      sellerAcctBank: sellerAccount.accounts[0].bankName,
-      sellerAcctCode: sellerAccount.accounts[0].bankCode,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error fetching seller account." });
   }
 });
 

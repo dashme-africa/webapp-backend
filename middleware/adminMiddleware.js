@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-const Admin = require('../models/Admin'); // Assuming the admin model exists
+const Admin = require('../models/Admin'); 
+require('dotenv').config();
 
 const protectAdmin = async (req, res, next) => {
   let token;
@@ -8,7 +9,7 @@ const protectAdmin = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
 
-      const decoded = jwt.verify(token, "hello");
+      const decoded = jwt.verify(token, process.env.ADMIN_TOKEN_SECRET_KEY);
       req.admin = await Admin.findById(decoded.id).select('-password'); // Exclude password
 
       next();

@@ -1,12 +1,10 @@
 const express = require("express");
-const dotenv = require("dotenv");
 const User = require('../models/User');
 const mongoose = require('mongoose');
 const axios = require('axios');
-
-dotenv.config();
-
 const router = express.Router();
+
+require('dotenv').config();
 
 // Cached bank list
 let cachedBanks = [];
@@ -149,6 +147,5 @@ router.post('/initialize-transaction', async (req, res) => {
         });
     }
 });
-
 
 module.exports = router;

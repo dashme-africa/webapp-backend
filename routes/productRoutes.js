@@ -2,19 +2,21 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const multer = require('multer');
+const User = require('../models/User');
 const cloudinary = require('cloudinary').v2;
 
-// Cloudinary Configuration (Make sure your .env file is set up)
+require('dotenv').config();
+
+// Cloudinary Configuration
 cloudinary.config({
-  cloud_name: "df2q6gyuq",
-  api_key: "259936754944698",
-  api_secret: "bTfV4_taJPd1zxxk1KJADTL8JdU",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Multer memory storage (since we're uploading to Cloudinary)
-const storage = multer.memoryStorage(); // Store file in memory
+// Multer memory storage
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-
 
 // @desc Create a new product for sale
 // @route POST /api/products
@@ -25,8 +27,6 @@ router.post('/', upload.single('image'), async (req, res) => {
 
   const { title, description, category, price, priceCategory, location, uploader } = req.body;
 
-  console.log(uploader)
-
   if (!title || !category || !price || !uploader) {
     return res.status(400).json({
       message: 'Please fill all required fields, provide an image, and include uploader information',
@@ -34,6 +34,17 @@ router.post('/', upload.single('image'), async (req, res) => {
   }
 
   try {
+    // Check if uploader exists and has verified bank details
+    const user = await User.findById(uploader);
+    console.log(user)
+    if (!user) {
+      return res.status(404).json({ message: 'Uploader not found' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ message: 'Bank details not verified. Please verify your bank details to upload a product.' });
+    }
+
     // Upload image to Cloudinary
     let imageUrl = '';
     if (req.file) {
@@ -54,12 +65,14 @@ router.post('/', upload.single('image'), async (req, res) => {
       try {
         const result = await uploadPromise;
         imageUrl = result.secure_url;
+        console.log(imageUrl)
       } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Image upload failed', error: error.message });
       }
     }
 
+    // Create new product
     const product = new Product({
       title,
       description,
@@ -68,12 +81,12 @@ router.post('/', upload.single('image'), async (req, res) => {
       priceCategory,
       image: imageUrl,
       location,
-      tag: 'sell', // Explicitly set the tag to "sell"
-      uploader, // Add the uploader ID
-      availability: true, // Default to available
+      tag: 'For sale',
+      uploader,
+      availability: true,
     });
 
-    console.log('Product data to be saved:', product); // Debug log
+    console.log('Product data to be saved:', product);
 
     const createdProduct = await product.save();
     if (!createdProduct) {
@@ -101,6 +114,15 @@ router.post('/donate', upload.single('image'), async (req, res) => {
   }
 
   try {
+    // Check if uploader exists and has verified bank details
+    const user = await User.findById(uploader);
+    if (!user) {
+      return res.status(404).json({ message: 'Uploader not found' });
+    }
+    if (!user.isVerified) {
+      return res.status(403).json({ message: 'Bank details not verified. Please verify your bank details to donate a product.' });
+    }
+
     // Upload image to Cloudinary
     let imageUrl = '';
     if (req.file) {
@@ -127,18 +149,19 @@ router.post('/donate', upload.single('image'), async (req, res) => {
       }
     }
 
+    // Create new donation product
     const product = new Product({
       title,
       description,
       category,
       image: imageUrl,
       location,
-      tag: 'donate',
-      uploader, // Add the uploader ID
-      availability: true, // Default to available
+      tag: 'Donated',
+      uploader,
+      availability: true,
     });
 
-    console.log('Product to be donated to be saved:', product); // Debug log
+    console.log('Product to be donated to be saved:', product);
 
     const createdProduct = await product.save();
     if (!createdProduct) {
