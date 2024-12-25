@@ -16,13 +16,13 @@ const productSchema = mongoose.Schema(
     price: {
       type: Number,
       required: function () {
-        return this.tag !== 'Donated';
+        return this.tag !== 'Donate';
       },
     },
     priceCategory: {
       type: String,
       required: function () {
-        return this.tag !== 'Donated';
+        return this.tag !== 'Donate';
       },
     },
     image: {

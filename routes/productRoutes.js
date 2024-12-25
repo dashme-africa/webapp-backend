@@ -156,7 +156,7 @@ router.post('/donate', upload.single('image'), async (req, res) => {
       category,
       image: imageUrl,
       location,
-      tag: 'Donated',
+      tag: 'Donate',
       uploader,
       availability: true,
     });
