@@ -29,7 +29,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
   if (!title || !category || !price || !uploader) {
     return res.status(400).json({
-      message: 'Please fill all required fields, provide an image, and include uploader information',
+      message: 'Please fill all required fields',
     });
   }
 
@@ -86,7 +86,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       availability: true,
     });
 
-    console.log('Product data to be saved:', product);
+    console.log('Product to be sold saved:', product);
 
     const createdProduct = await product.save();
     if (!createdProduct) {
@@ -102,14 +102,14 @@ router.post('/', upload.single('image'), async (req, res) => {
 // @route POST /api/products/donate
 // @access Public
 router.post('/donate', upload.single('image'), async (req, res) => {
-  console.log('Form data received:', req.body);
-  console.log('Uploaded file:', req.file);
+  console.log('Form data received: Donated', req.body);
+  console.log('Uploaded file: Donated', req.file);
 
   const { title, description, category, location, uploader } = req.body;
 
   if (!title || !category || !location || !uploader) {
     return res.status(400).json({
-      message: 'Please fill all required fields, provide an image, and include uploader information',
+      message: 'Please fill all required fields',
     });
   }
 
@@ -161,7 +161,7 @@ router.post('/donate', upload.single('image'), async (req, res) => {
       availability: true,
     });
 
-    console.log('Product to be donated to be saved:', product);
+    console.log('Product to be donated saved:', product);
 
     const createdProduct = await product.save();
     if (!createdProduct) {
@@ -169,7 +169,8 @@ router.post('/donate', upload.single('image'), async (req, res) => {
     }
     res.status(201).json(createdProduct);
   } catch (error) {
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error('Error occurred:', error); // Logs the error to the console
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
 
