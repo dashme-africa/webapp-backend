@@ -8,7 +8,7 @@ require('dotenv').config();
 
 // Generate a JWT
 const generateToken = (id) => {
-return jwt.sign({ id }, process.env.TOKEN_SECRET_KEY, { expiresIn: '30d' });
+  return jwt.sign({ id }, process.env.TOKEN_SECRET_KEY, { expiresIn: '30d' });
 };
 
 // User registration with Monnify reserved account creation
@@ -22,27 +22,34 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ message: 'Please provide all fields.' });
   }
 
-  // Check if user already exists
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    return res.status(400).json({ message: 'User already exists.' });
+  try {
+    // Check if user already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists.' });
+    }
+
+    // Create new user
+    const newUser = new User({
+      fullName,
+      username,
+      email,
+      password,
+    });
+
+    // Save new user to the database
+    await newUser.save();
+
+    res.status(201).json({
+      success: true,
+      user: newUser,
+    });
+  } catch (error) {
+    console.error('Error during registration:', error.message);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
-
-  const newUser = new User({
-    fullName,
-    username,
-    email,
-    password,
-  });
-
-  res.status(201).json({
-    success: true,
-    user: newUser,
-  });
-
-  console.error('Error during registration:', error.message);
-  res.status(500).json({ message: 'Internal Server Error' });
 });
+
 
 // @desc Authenticate user
 // @route POST /api/users/login
