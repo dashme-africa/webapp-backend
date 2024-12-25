@@ -23,10 +23,10 @@ app.use(express.urlencoded({ extended: true }));
 const PORT = process.env.PORT || 5000;
 
 // CORS Configuration
+
 const allowedOrigins = [
-  'https://dashmeafrica-frontend.vercel.app',
-  'https://dashmeafrica-frontend.onrender.com',
-  'http://localhost:5173',
+  process.env.FRONTEND_URL_PRODUCTION,
+  process.env.FRONTEND_URL_LOCAL,
 ];
 
 const corsOptions = {
