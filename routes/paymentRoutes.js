@@ -138,7 +138,7 @@ fetchBanks();
 // Route to get seller bank details
 router.get('/seller/:sellerId/bank-details', async (req, res) => {
   const { sellerId } = req.params;
-
+  
 //   console.log(`Fetching bank details for sellerId: ${sellerId}`);
 
   try {
@@ -172,7 +172,7 @@ router.get('/seller/:sellerId/bank-details', async (req, res) => {
 router.post('/subaccount', async (req, res) => {
   const { businessName, bankName, accountNumber, percentageCharge } = req.body;
 
-  console.log(req.body);
+//   console.log(req.body);
 
   try {
     // Ensure the bank list is available
@@ -217,14 +217,14 @@ router.post('/subaccount', async (req, res) => {
 
 // Route to initialize transaction
 router.post('/initialize-transaction', async (req, res) => {
-    const { email, amount, sellerSubaccount } = req.body;
+    const { email, amount, subaccount } = req.body;
 
     console.log("Initialize Transaction Request:", req.body);
   
     try {
       // Ensure all required fields are provided
-      if (!email || !amount || !sellerSubaccount) {
-        return res.status(400).json({ message: "Required fields are missing: email, amount, sellerSubaccount" });
+      if (!email || !amount || !subaccount) {
+        return res.status(400).json({ message: "Required fields are missing: email, amount, subaccount" });
       }
   
       // Transaction split logic
@@ -233,7 +233,7 @@ router.post('/initialize-transaction', async (req, res) => {
         {
           email, // Buyer's email
           amount, // Total amount (in kobo, so multiply Naira by 100)
-          subaccount: sellerSubaccount, // Seller's Paystack subaccount
+          subaccount: subaccount, // Seller's Paystack subaccount
           transaction_charge: Math.floor((20 / 100) * amount), // Platform's 20% charge
           bearer: 'subaccount', // Ensures seller bears the transaction charge
         },
