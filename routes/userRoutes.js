@@ -12,34 +12,6 @@ const generateToken = (id) => {
   return jwt.sign({ id }, "hello", { expiresIn: '30d' });
 };
 
-// Function to get Monnify Bearer Token 
-const getMonnifyToken = async () => {
-  const MONNIFY_API_KEY = process.env.MONNIFY_API_KEY;
-  const MONNIFY_SECRET_KEY = process.env.MONNIFY_SECRET_KEY;
-  const MONNIFY_BASE_URL = process.env.MONNIFY_BASE_URL || 'https://sandbox.monnify.com';
-
-
-  try {
-    const credentials = `${MONNIFY_API_KEY}:${MONNIFY_SECRET_KEY}`;
-    const base64Credentials = Buffer.from(credentials).toString('base64');
-
-    const response = await axios.post(
-      `${MONNIFY_BASE_URL}/api/v1/auth/login`,
-      {},
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${base64Credentials}`,
-        },
-      }
-    );
-    return response.data.responseBody.accessToken;
-  } catch (error) {
-    console.error('Error fetching Monnify token:', error.message);
-    throw new Error('Failed to fetch Monnify token');
-  }
-};
-
 
 // User registration with Monnify reserved account creation
 // @desc Register a new user
@@ -66,83 +38,14 @@ router.post('/register', async (req, res) => {
     password,
   });
 
-  try {
-    // Create new user
-    const savedUser = await newUser.save();
 
-    // Create Monnify reserved account
-    const token = await getMonnifyToken();
-    const accountReference = `REF-${Date.now()}`;
-    const accountName = fullName;
+  res.status(201).json({
+    success: true,
+    user: newUser,
+  });
 
-    console.log(accountName, "1")
-
-    const requestData = {
-      accountReference,
-      accountName,
-      currencyCode: 'NGN',
-      contractCode: process.env.MONNIFY_CONTRACT_CODE,
-      customerEmail: email,
-      customerName: fullName,
-      getAllAvailableBanks: true,
-    };
-
-    try {
-      // Create a Customer Reserved Account
-      const response = await axios.post(
-        `${process.env.MONNIFY_BASE_URL}/api/v2/bank-transfer/reserved-accounts`,
-        requestData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      const reservedAccountDetails = response.data.responseBody;
-
-      console.log(requestData, "requestData")
-      console.log(response.data.responseBody, "responseBody")
-
-
-      // Save reserved account details to database
-      const newReservedAccount = new ReservedAccount({
-        accountReference: reservedAccountDetails.accountReference,
-        accountName: reservedAccountDetails.accountName,
-        customerEmail: reservedAccountDetails.customerEmail,
-        customerName: reservedAccountDetails.customerName,
-        accounts: reservedAccountDetails.accounts,
-        balance: 0, // Initialize with 0 balance
-        userId: savedUser._id, // Link the reserved account to the user
-      });
-
-      await newReservedAccount.save();
-
-      res.status(201).json({
-        success: true,
-        user: savedUser,
-        accountDetails: reservedAccountDetails,
-      });
-    } catch (error) {
-      console.error('Error during registration:', error.response?.data || error.message);
-
-      if (error.response?.data?.responseCode === 'R42') {
-        // Handle duplicate account error
-        return res.status(400).json({
-          message: 'A reserved account already exists for this customer. Please contact support if this is unexpected.',
-        });
-      }
-
-      // Generic Monnify error fallback
-      return res.status(500).json({
-        message: 'Failed to create reserved account. Please try again later.',
-      });
-    }
-  } catch (error) {
-    console.error('Error during registration:', error.message);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
+  console.error('Error during registration:', error.message);
+  res.status(500).json({ message: 'Internal Server Error' });
 });
 
 

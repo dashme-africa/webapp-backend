@@ -35,9 +35,9 @@ const productSchema = mongoose.Schema(
       type: String,
     },
     uploader: {
-      type: mongoose.Schema.Types.ObjectId, // Assuming users are stored as ObjectIds
+      type: mongoose.Schema.Types.ObjectId, 
       ref: 'User', // Reference to the User model
-      required: true, // Make this mandatory
+      required: true, 
     },
     availability: {
       type: Boolean,
