@@ -33,6 +33,12 @@ router.post('/', upload.single('image'), async (req, res) => {
     });
   }
 
+  if (!req.file) {
+    return res.status(400).json({
+      message: 'Please add the product image',
+    });
+  }
+
   try {
     // Check if uploader exists and has verified bank details
     const user = await User.findById(uploader);
@@ -110,6 +116,12 @@ router.post('/donate', upload.single('image'), async (req, res) => {
   if (!title || !category || !location || !uploader) {
     return res.status(400).json({
       message: 'Please fill all required fields',
+    });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({
+      message: 'Please add the product image',
     });
   }
 

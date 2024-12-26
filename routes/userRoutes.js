@@ -11,22 +11,26 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.TOKEN_SECRET_KEY, { expiresIn: '30d' });
 };
 
-// User registration with Monnify reserved account creation
+// User registration
 // @desc Register a new user
 // @route POST /api/users/register
 router.post('/register', async (req, res) => {
-  const { fullName, username, email, password } = req.body;
+  const { fullName, username, email, password, confirmPassword } = req.body;
 
   // Validate input
-  if (!fullName || !username || !email || !password) {
+  if (!fullName || !username || !email || !password || !confirmPassword) {
     return res.status(400).json({ message: 'Please provide all fields.' });
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: 'Passwords do not match.' });
   }
 
   try {
     // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists.' });
+      return res.status(400).json({ message: 'Email already exists.' });
     }
 
     // Create new user
@@ -36,6 +40,7 @@ router.post('/register', async (req, res) => {
       email,
       password,
     });
+    
 
     // Save new user to the database
     await newUser.save();
