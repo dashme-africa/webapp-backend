@@ -27,6 +27,31 @@ const fetchBanks = async () => {
 // Load bank list on server start
 fetchBanks();
 
+// Route to get seller details
+router.get('/seller/:sellerId', async (req, res) => {
+    const { sellerId } = req.params;
+
+    //   console.log(`Fetching bank details for sellerId: ${sellerId}`);
+
+    try {
+        const objectId = new mongoose.Types.ObjectId(sellerId);
+
+        const seller = await User.findOne({ _id: objectId });
+
+        if (!seller) {
+            //   console.log('Seller not found.');
+            return res.status(404).send({ error: 'Seller not found.' });
+        }
+
+        // console.log(`Seller found: ${seller}`);
+
+        res.status(200).send({ seller });
+    } catch (err) {
+        console.error('Error fetching bank details:', err);
+        res.status(500).send({ error: 'Error retrieving bank details.' });
+    }
+});
+
 // Route to get seller bank details
 router.get('/seller/:sellerId/bank-details', async (req, res) => {
     const { sellerId } = req.params;

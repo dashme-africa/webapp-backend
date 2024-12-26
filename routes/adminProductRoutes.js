@@ -50,13 +50,13 @@ router.get('/:id', protectAdmin, async (req, res) => {
 // @access Private (Admin)
 router.delete('/:id', protectAdmin, async (req, res) => {
   try {
-    console.log('Product ID:', req.params.id);  // Log product ID for debugging
+    // console.log('Product ID:', req.params.id);  
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    console.log('Product deleted:', product);  // Log successful deletion
+    // console.log('Product deleted:', product); 
     res.status(200).json({ message: 'Product deleted successfully' });
   } catch (error) {
     console.error('Error deleting product:', error.message);
@@ -68,8 +68,8 @@ router.delete('/:id', protectAdmin, async (req, res) => {
 // @route PUT /api/admin/products/:id
 // @access Private (Admin)
 router.put('/:id', upload.single('image'), async (req, res) => {
-  console.log('Form data received:', req.body);
-  console.log('Uploaded file:', req.file);
+  // console.log('Form data received:', req.body);
+  // console.log('Uploaded file:', req.file);
 
   const { title, description, category, price, priceCategory, location, tag } = req.body;
 

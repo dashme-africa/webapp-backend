@@ -99,10 +99,18 @@ app.get("/api/couriers", async (req, res) => {
   }
 });
 
+
+// Define constant parcels data
+const CONSTANT_PARCELS = {
+  weight: 5,
+  length: 10,
+  width: 10,
+  height: 5,
+};
+
 // Get single rate for a specific courier
 app.post("/api/rates", async (req, res) => {
   const { carrierName, type, toAddress, fromAddress, parcels, items } = req.body;
-  console.log(req.body)
 
   if (!carrierName || !type || !toAddress || !fromAddress || !parcels || !items) {
     return res.status(400).json({ error: "Missing required fields." });
@@ -115,7 +123,7 @@ app.post("/api/rates", async (req, res) => {
         type,
         toAddress,
         fromAddress,
-        parcels,
+        parcels: CONSTANT_PARCELS, // Use the constant parcels data
         items,
       },
       {
@@ -127,6 +135,7 @@ app.post("/api/rates", async (req, res) => {
     );
 
     res.status(200).json(response.data);
+    console.log(response.data)
   } catch (error) {
     console.error("Error fetching couriers:", error.response?.data || error.message);
     res.status(error.response?.status || 500).json({

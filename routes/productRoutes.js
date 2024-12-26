@@ -22,8 +22,8 @@ const upload = multer({ storage: storage });
 // @route POST /api/products
 // @access Public
 router.post('/', upload.single('image'), async (req, res) => {
-  console.log('Form data received:', req.body);
-  console.log('Uploaded file:', req.file);
+  // console.log('Form data received:', req.body);
+  // console.log('Uploaded file:', req.file);
 
   const { title, description, category, price, priceCategory, location, uploader } = req.body;
 
@@ -36,7 +36,7 @@ router.post('/', upload.single('image'), async (req, res) => {
   try {
     // Check if uploader exists and has verified bank details
     const user = await User.findById(uploader);
-    console.log(user)
+    // console.log(user)
     if (!user) {
       return res.status(404).json({ message: 'Uploader not found' });
     }
@@ -65,7 +65,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       try {
         const result = await uploadPromise;
         imageUrl = result.secure_url;
-        console.log(imageUrl)
+        // console.log(imageUrl)
       } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Image upload failed', error: error.message });
@@ -86,7 +86,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       availability: true,
     });
 
-    console.log('Product to be sold saved:', product);
+    // console.log('Product to be sold saved:', product);
 
     const createdProduct = await product.save();
     if (!createdProduct) {
@@ -102,8 +102,8 @@ router.post('/', upload.single('image'), async (req, res) => {
 // @route POST /api/products/donate
 // @access Public
 router.post('/donate', upload.single('image'), async (req, res) => {
-  console.log('Form data received: Donated', req.body);
-  console.log('Uploaded file: Donated', req.file);
+  // console.log('Form data received: Donated', req.body);
+  // console.log('Uploaded file: Donated', req.file);
 
   const { title, description, category, location, uploader } = req.body;
 
@@ -161,7 +161,7 @@ router.post('/donate', upload.single('image'), async (req, res) => {
       availability: true,
     });
 
-    console.log('Product to be donated saved:', product);
+    // console.log('Product to be donated saved:', product);
 
     const createdProduct = await product.save();
     if (!createdProduct) {
