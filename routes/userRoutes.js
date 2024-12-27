@@ -40,7 +40,7 @@ router.post('/register', async (req, res) => {
       email,
       password,
     });
-    
+
 
     // Save new user to the database
     await newUser.save();
@@ -54,7 +54,6 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 });
-
 
 // @desc Authenticate user
 // @route POST /api/users/login
@@ -84,5 +83,15 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// @desc Logout user
+// @route POST /api/users/logout
+// @access Private
+router.post('/logout', (req, res) => {
+  // This is just to inform the user that they are logged out on the server side.
+  // No need to perform any action if you are using JWT as the token is stored client-side.
+  res.json({ message: 'User logged out' });
+});
+
 
 module.exports = router;

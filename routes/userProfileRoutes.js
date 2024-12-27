@@ -28,9 +28,6 @@ router.put('/profile', protect, upload.single('image'), async (req, res) => {
   try {
     const { fullName, username, email, address, bio, accountName, bankName, accountNumber, isVerified } = req.body;
 
-
-    // console.log(req.body)
-
     // Validation for required fields
     if (!fullName || !username || !email) {
       return res.status(400).json({ message: 'Please provide all required fields' });
@@ -69,17 +66,15 @@ router.put('/profile', protect, upload.single('image'), async (req, res) => {
       email,
       address,
       bio,
-      accountName, // Add accountName to update
-      bankName,    // Optionally, save the bank name
-      accountNumber, // Optionally, save the account number
-      isVerified: isVerified ? true : false, // Add verification status
+      accountName,
+      bankName,
+      accountNumber,
+      isVerified: isVerified ? true : false,
     };
 
     if (profilePicture) {
-      updatedData.profilePicture = profilePicture; // Add image URL if uploaded.
+      updatedData.profilePicture = profilePicture;
     }
-
-    // console.log(updatedData);
 
     // Update user in database
     const updatedUser = await User.findByIdAndUpdate(req.user._id, updatedData, { new: true });

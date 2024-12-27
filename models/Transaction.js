@@ -1,10 +1,16 @@
 const mongoose = require('mongoose');
 
-const TransactionSchema = new mongoose.Schema({
-  transactionReference: { type: String, required: true, unique: true },
-  status: { type: String, required: true, default: 'PENDING' },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date },
-});
+const transactionSchema = new mongoose.Schema({
+  transactionId: { type: String, required: true },
+  reference: { type: String, required: true },
+  amount: { type: Number, required: true },
+  currency: { type: String, required: true },
+  status: { type: String, required: true },
+  customerEmail: { type: String, required: true },
+  paymentMethod: { type: String, required: true },
+  paidAt: { type: Date, required: true },
+  gatewayResponse: { type: String, required: true },
+}, { timestamps: true });
 
-module.exports = mongoose.model('Transaction', TransactionSchema);
+const Transaction = mongoose.model('Transaction', transactionSchema);
+module.exports = Transaction;

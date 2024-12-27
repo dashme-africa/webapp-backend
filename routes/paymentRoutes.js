@@ -134,14 +134,12 @@ router.post('/subaccount', async (req, res) => {
 
 // Route to initialize transaction
 router.post('/initialize-transaction', async (req, res) => {
-    const { email, amount, subaccount } = req.body;
-
-    console.log("Initialize Transaction Request:", req.body);
+    const { email, amount, subaccount, redis_key, rate_id } = req.body;
 
     try {
         // Ensure all required fields are provided
-        if (!email || !amount || !subaccount) {
-            return res.status(400).json({ message: "Required fields are missing: email, amount, subaccount" });
+        if (!email || !amount || !subaccount || !redis_key || !rate_id) {
+            return res.status(400).json({ message: "Required fields are missing" });
         }
 
         // Transaction split logic
@@ -153,6 +151,11 @@ router.post('/initialize-transaction', async (req, res) => {
                 subaccount: subaccount, // Seller's Paystack subaccount
                 transaction_charge: Math.floor((20 / 100) * amount), // Platform's 20% charge
                 bearer: 'subaccount', // Ensures seller bears the transaction charge
+                callback_url: 'http://localhost:5173/confirmationPage', // Redirect URL after payment completion
+                metadata: {
+                    redis_key,  // Store redis_key in metadata
+                    rate_id      // Store rate_id in metadata
+                }
             },
             {
                 headers: {
@@ -162,7 +165,6 @@ router.post('/initialize-transaction', async (req, res) => {
             }
         );
 
-        console.log("Transaction initialized successfully:", response.data);
         res.status(201).json(response.data);
     } catch (error) {
         console.error('Error initializing transaction:', error.response?.data || error.message);
@@ -172,5 +174,7 @@ router.post('/initialize-transaction', async (req, res) => {
         });
     }
 });
+
+
 
 module.exports = router;

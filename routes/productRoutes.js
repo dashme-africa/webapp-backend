@@ -186,12 +186,17 @@ router.post('/donate', upload.single('image'), async (req, res) => {
   }
 });
 
-// @desc Get all products
+// @desc Get all products or filter by category
 // @route GET /api/products
 // @access Public
 router.get('/', async (req, res) => {
+  // console.log(req.query); // Optional: for debugging purposes
   try {
-    const products = await Product.find().populate('uploader', 'username email'); // Include username and email from the User model
+    const { category } = req.query; // Get the category from the query parameters
+    const query = category ? { category } : {}; // If category exists, filter by it, else get all products
+
+    // Fetch the products based on the query
+    const products = await Product.find(query).populate('uploader', 'username email');
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
@@ -219,6 +224,9 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+module.exports = router;
+
+
 // router.patch('/:id/availability', async (req, res) => {
 //   try {
 //     const product = await Product.findById(req.params.id);
@@ -233,7 +241,5 @@ router.get('/:id', async (req, res) => {
 //     res.status(500).json({ message: 'Server Error', error: error.message });
 //   }
 // });
-
-module.exports = router;
 
 
