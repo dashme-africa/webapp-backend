@@ -25,8 +25,11 @@ const productSchema = mongoose.Schema(
         return this.tag !== 'Donate';
       },
     },
-    image: {
-      type: String,
+    images: {
+      type: [String], // Array to store multiple image URLs
+    },
+    primaryImage: {
+      type: String, // URL of the primary image
     },
     location: {
       type: String,

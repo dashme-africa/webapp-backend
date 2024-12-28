@@ -21,170 +21,170 @@ const upload = multer({ storage: storage });
 // @desc Create a new product for sale
 // @route POST /api/products
 // @access Public
-router.post('/', upload.single('image'), async (req, res) => {
-  // console.log('Form data received:', req.body);
-  // console.log('Uploaded file:', req.file);
+// router.post('/', upload.single('image'), async (req, res) => {
+//   // console.log('Form data received:', req.body);
+//   // console.log('Uploaded file:', req.file);
 
-  const { title, description, category, price, priceCategory, location, uploader } = req.body;
+//   const { title, description, category, price, priceCategory, location, uploader } = req.body;
 
-  if (!title || !category || !price || !uploader) {
-    return res.status(400).json({
-      message: 'Please fill all required fields',
-    });
-  }
+//   if (!title || !category || !price || !uploader) {
+//     return res.status(400).json({
+//       message: 'Please fill all required fields',
+//     });
+//   }
 
-  if (!req.file) {
-    return res.status(400).json({
-      message: 'Please add the product image',
-    });
-  }
+//   if (!req.file) {
+//     return res.status(400).json({
+//       message: 'Please add the product image',
+//     });
+//   }
 
-  try {
-    // Check if uploader exists and has verified bank details
-    const user = await User.findById(uploader);
-    // console.log(user)
-    if (!user) {
-      return res.status(404).json({ message: 'Uploader not found' });
-    }
+//   try {
+//     // Check if uploader exists and has verified bank details
+//     const user = await User.findById(uploader);
+//     // console.log(user)
+//     if (!user) {
+//       return res.status(404).json({ message: 'Uploader not found' });
+//     }
 
-    if (!user.isVerified) {
-      return res.status(403).json({ message: 'Bank details not verified. Please verify your bank details to upload a product.' });
-    }
+//     if (!user.isVerified) {
+//       return res.status(403).json({ message: 'Bank details not verified. Please verify your bank details to upload a product.' });
+//     }
 
-    // Upload image to Cloudinary
-    let imageUrl = '';
-    if (req.file) {
-      const uploadPromise = new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { resource_type: 'image' },
-          (error, result) => {
-            if (error) {
-              reject(error);
-            }
-            resolve(result);
-          }
-        );
+//     // Upload image to Cloudinary
+//     let imageUrl = '';
+//     if (req.file) {
+//       const uploadPromise = new Promise((resolve, reject) => {
+//         const stream = cloudinary.uploader.upload_stream(
+//           { resource_type: 'image' },
+//           (error, result) => {
+//             if (error) {
+//               reject(error);
+//             }
+//             resolve(result);
+//           }
+//         );
 
-        require('streamifier').createReadStream(req.file.buffer).pipe(stream);
-      });
+//         require('streamifier').createReadStream(req.file.buffer).pipe(stream);
+//       });
 
-      try {
-        const result = await uploadPromise;
-        imageUrl = result.secure_url;
-        // console.log(imageUrl)
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Image upload failed', error: error.message });
-      }
-    }
+//       try {
+//         const result = await uploadPromise;
+//         imageUrl = result.secure_url;
+//         // console.log(imageUrl)
+//       } catch (error) {
+//         console.error(error);
+//         return res.status(500).json({ message: 'Image upload failed', error: error.message });
+//       }
+//     }
 
-    // Create new product
-    const product = new Product({
-      title,
-      description,
-      category,
-      price,
-      priceCategory,
-      image: imageUrl,
-      location,
-      tag: 'For sale',
-      uploader,
-      availability: true,
-    });
+//     // Create new product
+//     const product = new Product({
+//       title,
+//       description,
+//       category,
+//       price,
+//       priceCategory,
+//       image: imageUrl,
+//       location,
+//       tag: 'For sale',
+//       uploader,
+//       availability: true,
+//     });
 
-    // console.log('Product to be sold saved:', product);
+//     // console.log('Product to be sold saved:', product);
 
-    const createdProduct = await product.save();
-    if (!createdProduct) {
-      return res.status(500).json({ message: 'Failed to create product' });
-    }
-    res.status(201).json(createdProduct);
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error: error.message });
-  }
-});
+//     const createdProduct = await product.save();
+//     if (!createdProduct) {
+//       return res.status(500).json({ message: 'Failed to create product' });
+//     }
+//     res.status(201).json(createdProduct);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Server Error', error: error.message });
+//   }
+// });
 
 // @desc Create a new product to donate
 // @route POST /api/products/donate
 // @access Public
-router.post('/donate', upload.single('image'), async (req, res) => {
-  // console.log('Form data received: Donated', req.body);
-  // console.log('Uploaded file: Donated', req.file);
+// router.post('/donate', upload.single('image'), async (req, res) => {
+//   // console.log('Form data received: Donated', req.body);
+//   // console.log('Uploaded file: Donated', req.file);
 
-  const { title, description, category, location, uploader } = req.body;
+//   const { title, description, category, location, uploader } = req.body;
 
-  if (!title || !category || !location || !uploader) {
-    return res.status(400).json({
-      message: 'Please fill all required fields',
-    });
-  }
+//   if (!title || !category || !location || !uploader) {
+//     return res.status(400).json({
+//       message: 'Please fill all required fields',
+//     });
+//   }
 
-  if (!req.file) {
-    return res.status(400).json({
-      message: 'Please add the product image',
-    });
-  }
+//   if (!req.file) {
+//     return res.status(400).json({
+//       message: 'Please add the product image',
+//     });
+//   }
 
-  try {
-    // Check if uploader exists and has verified bank details
-    const user = await User.findById(uploader);
-    if (!user) {
-      return res.status(404).json({ message: 'Uploader not found' });
-    }
-    if (!user.isVerified) {
-      return res.status(403).json({ message: 'Bank details not verified. Please verify your bank details to donate a product.' });
-    }
+//   try {
+//     // Check if uploader exists and has verified bank details
+//     const user = await User.findById(uploader);
+//     if (!user) {
+//       return res.status(404).json({ message: 'Uploader not found' });
+//     }
+//     if (!user.isVerified) {
+//       return res.status(403).json({ message: 'Bank details not verified. Please verify your bank details to donate a product.' });
+//     }
 
-    // Upload image to Cloudinary
-    let imageUrl = '';
-    if (req.file) {
-      const uploadPromise = new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { resource_type: 'image' },
-          (error, result) => {
-            if (error) {
-              reject(error);
-            }
-            resolve(result);
-          }
-        );
+//     // Upload image to Cloudinary
+//     let imageUrl = '';
+//     if (req.file) {
+//       const uploadPromise = new Promise((resolve, reject) => {
+//         const stream = cloudinary.uploader.upload_stream(
+//           { resource_type: 'image' },
+//           (error, result) => {
+//             if (error) {
+//               reject(error);
+//             }
+//             resolve(result);
+//           }
+//         );
 
-        require('streamifier').createReadStream(req.file.buffer).pipe(stream);
-      });
+//         require('streamifier').createReadStream(req.file.buffer).pipe(stream);
+//       });
 
-      try {
-        const result = await uploadPromise;
-        imageUrl = result.secure_url;
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Image upload failed', error: error.message });
-      }
-    }
+//       try {
+//         const result = await uploadPromise;
+//         imageUrl = result.secure_url;
+//       } catch (error) {
+//         console.error(error);
+//         return res.status(500).json({ message: 'Image upload failed', error: error.message });
+//       }
+//     }
 
-    // Create new donation product
-    const product = new Product({
-      title,
-      description,
-      category,
-      image: imageUrl,
-      location,
-      tag: 'Donate',
-      uploader,
-      availability: true,
-    });
+//     // Create new donation product
+//     const product = new Product({
+//       title,
+//       description,
+//       category,
+//       image: imageUrl,
+//       location,
+//       tag: 'Donate',
+//       uploader,
+//       availability: true,
+//     });
 
-    // console.log('Product to be donated saved:', product);
+//     // console.log('Product to be donated saved:', product);
 
-    const createdProduct = await product.save();
-    if (!createdProduct) {
-      return res.status(500).json({ message: 'Failed to create product' });
-    }
-    res.status(201).json(createdProduct);
-  } catch (error) {
-    console.error('Error occurred:', error); // Logs the error to the console
-    res.status(500).json({ message: 'Internal Server Error', error: error.message });
-  }
-});
+//     const createdProduct = await product.save();
+//     if (!createdProduct) {
+//       return res.status(500).json({ message: 'Failed to create product' });
+//     }
+//     res.status(201).json(createdProduct);
+//   } catch (error) {
+//     console.error('Error occurred:', error); // Logs the error to the console
+//     res.status(500).json({ message: 'Internal Server Error', error: error.message });
+//   }
+// });
 
 // @desc Get all products or filter by category
 // @route GET /api/products
@@ -208,7 +208,7 @@ router.get('/', async (req, res) => {
 // @access Public
 router.get('/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate('uploader', 'username email _id');
+    const product = await Product.findById(req.params.id).populate('uploader', 'username email _id profilePicture');
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
@@ -223,6 +223,138 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 });
+
+router.post('/', upload.array('images', 10), async (req, res) => {
+  const { title, description, category, price, priceCategory, location, uploader, primaryImageIndex } = req.body;
+
+  if (!title || !category || !price || !uploader) {
+    return res.status(400).json({ message: 'Please fill all required fields' });
+  }
+
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ message: 'Please upload at least one product image' });
+  }
+
+  // Backend validation for maximum 10 images
+  if (req.files.length > 10) {
+    return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
+  }
+
+  if (primaryImageIndex === undefined || primaryImageIndex < 0 || primaryImageIndex >= req.files.length) {
+    return res.status(400).json({ message: 'Please select a primary image for display' });
+  }
+
+  try {
+    const user = await User.findById(uploader);
+    if (!user) return res.status(404).json({ message: 'Uploader not found' });
+    if (!user.isVerified) return res.status(403).json({ message: 'Verify your bank details first.' });
+
+    // Upload images to Cloudinary
+    const imageUploadPromises = req.files.map((file) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { resource_type: 'image' },
+          (error, result) => {
+            if (error) reject(error);
+            resolve(result.secure_url);
+          }
+        );
+        require('streamifier').createReadStream(file.buffer).pipe(stream);
+      });
+    });
+
+    const uploadedImages = await Promise.all(imageUploadPromises);
+    const primaryImage = uploadedImages[primaryImageIndex] || uploadedImages[0];
+
+    // Create product document
+    const product = new Product({
+      title,
+      description,
+      category,
+      price,
+      priceCategory,
+      images: uploadedImages,
+      primaryImage,
+      location,
+      uploader,
+      tag: 'For sale',
+      availability: true,
+    });
+
+    const createdProduct = await product.save();
+    res.status(201).json(createdProduct);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+});
+
+
+router.post('/donate', upload.array('images', 10), async (req, res) => {
+
+  const { title, description, category, location, uploader, primaryImageIndex } = req.body;
+
+  if (!title || !category || !location || !uploader) {
+    return res.status(400).json({ message: 'Please fill all required fields' });
+  }
+
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ message: 'Please upload at least one product image' });
+  }
+
+  // Backend validation for maximum 10 images
+  if (req.files.length > 10) {
+    return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
+  }
+
+  if (primaryImageIndex === undefined || primaryImageIndex < 0 || primaryImageIndex >= req.files.length) {
+    return res.status(400).json({ message: 'Please select a primary image for display' });
+  }
+
+  try {
+    const user = await User.findById(uploader);
+    if (!user) return res.status(404).json({ message: 'Uploader not found' });
+    if (!user.isVerified) return res.status(403).json({ message: 'Verify your bank details first.' });
+
+    // Upload images to Cloudinary
+    const imageUploadPromises = req.files.map((file) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { resource_type: 'image' },
+          (error, result) => {
+            if (error) reject(error);
+            resolve(result.secure_url);
+          }
+        );
+        require('streamifier').createReadStream(file.buffer).pipe(stream);
+      });
+    });
+
+    const uploadedImages = await Promise.all(imageUploadPromises);
+    const primaryImage = uploadedImages[primaryImageIndex] || uploadedImages[0];
+
+    // Create product document
+    const product = new Product({
+      title,
+      description,
+      category,
+      images: uploadedImages,
+      primaryImage,
+      location,
+      uploader,
+      tag: 'Donate',
+      availability: true,
+    });
+
+    const createdProduct = await product.save();
+    res.status(201).json(createdProduct);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+});
+
+
+
+
 
 module.exports = router;
 
