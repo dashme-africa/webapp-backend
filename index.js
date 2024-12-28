@@ -247,52 +247,6 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
 });
 
 // Transaction route
-// app.get('/api/transaction/verify/:reference', async (req, res) => {
-//   const { reference } = req.params;
-
-//   try {
-//     const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
-//       headers: {
-//         Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-//       },
-//     });
-
-//     if (response.data.status) {
-//       const transactionData = response.data.data;
-
-//       // Check if the transaction exists
-//       const existingTransaction = await Transaction.findOne({ reference });
-//       if (existingTransaction) {
-//         return res.status(200).json({ message: 'Transaction already exists', data: existingTransaction });
-//       }
-
-//       // Create and save the transaction
-//       const newTransaction = new Transaction({
-//         transactionId: transactionData.id,
-//         reference: transactionData.reference,
-//         amount: transactionData.amount,
-//         currency: transactionData.currency,
-//         status: transactionData.status,
-//         customerEmail: transactionData.customer.email,
-//         paymentMethod: transactionData.channel,
-//         paidAt: transactionData.paid_at,
-//         gatewayResponse: transactionData.gateway_response,
-//         shipmentReference: transactionData.metadata.shipment_reference, // Store the shipment reference
-//       });
-
-//       await newTransaction.save();
-//       console.log(newTransaction)
-
-//       res.status(200).json({ message: 'Transaction verified and saved', data: newTransaction });
-//     } else {
-//       res.status(400).json({ message: 'Transaction verification failed' });
-//     }
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error verifying transaction', error: error.message });
-//   }
-// });
-
-// Transaction route
 app.get('/api/transaction/verify/:reference', async (req, res) => {
   const { reference } = req.params;
 
