@@ -6,6 +6,7 @@ const multer = require('multer');
 const streamifier = require('streamifier');
 const cloudinary = require('cloudinary').v2;
 const axios = require('axios');
+const Notification = require('../models/Notification');
 
 require('dotenv').config();
 
@@ -81,7 +82,7 @@ router.put('/profile', protect, upload.single('image'), async (req, res) => {
 
     // Create a notification after profile update
     const notification = new Notification({
-      user: req.user._id,
+      userId: req.user._id,
       message: 'You just updated your profile.',
       read: false, // Mark as unread
       timestamp: new Date(),
