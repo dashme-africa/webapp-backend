@@ -34,5 +34,66 @@ router.patch('/notifications/mark-read', protect, async (req, res) => {
     }
   });
   
+  // POST /api/notifications
+router.post('/notifications', async (req, res) => {
+    try {
+        const { message, userId } = req.body;
+
+        // Validation
+        if (!message || !userId) {
+            return res.status(400).json({ success: false, message: 'Message and userId are required' });
+        }
+
+        // Create the notification
+        const notification = await Notification.create({
+            message,
+            userId,
+            read: false, // Default to unread
+            timestamp: new Date(),
+        });
+
+        res.status(201).json({
+            success: true,
+            notification,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message,
+        });
+    }
+});
+
+// PATCH /api/notifications/:id/mark-read
+router.patch('/notifications/:id/mark-read', protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Find the notification
+        const notification = await Notification.findById(id);
+
+        if (!notification) {
+            return res.status(404).json({ success: false, message: 'Notification not found' });
+        }
+
+        // Update the read status
+        notification.read = true;
+        await notification.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Notification marked as read',
+            notification,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message,
+        });
+    }
+});
+
 
   module.exports = router;
