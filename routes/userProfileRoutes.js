@@ -79,6 +79,15 @@ router.put('/profile', protect, upload.single('image'), async (req, res) => {
     // Update user in database
     const updatedUser = await User.findByIdAndUpdate(req.user._id, updatedData, { new: true });
 
+    // Create a notification after profile update
+    const notification = new Notification({
+      user: req.user._id,
+      message: 'You just updated your profile.',
+      read: false, // Mark as unread
+      timestamp: new Date(),
+    });
+    await notification.save();  // Save notification to DB
+
     // Send updated user data as response
     res.status(200).json(updatedUser);
   } catch (error) {
