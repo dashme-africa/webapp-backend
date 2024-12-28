@@ -13,6 +13,7 @@ const adminDashboardRoutes = require('./routes/adminDashboardRoutes');
 const adminProductRoutes = require('./routes/adminProductRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const myProductRoutes = require('./routes/myProductRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const Transaction = require('./models/Transaction');
 const { protect } = require('./middleware/authMiddleware');
 
@@ -69,6 +70,7 @@ app.use('/api/userProfile', userProfileRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/myProducts', myProductRoutes);
+app.use('/api/notificationRoutes', myProductRoutes);
 
 // Get available couriers based on type
 app.get("/api/couriers", async (req, res) => {
