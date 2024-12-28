@@ -70,7 +70,7 @@ app.use('/api/userProfile', userProfileRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/myProducts', myProductRoutes);
-app.use('/api/notify', myProductRoutes);
+app.use('/api/notify', notificationRoutes);
 
 // Get available couriers based on type
 app.get("/api/couriers", async (req, res) => {
