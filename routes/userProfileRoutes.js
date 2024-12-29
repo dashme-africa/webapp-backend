@@ -70,11 +70,15 @@ router.put('/profile', protect, upload.single('image'), async (req, res) => {
       accountName,
       bankName,
       accountNumber,
-      isVerified: isVerified ? true : false,
     };
 
     if (profilePicture) {
       updatedData.profilePicture = profilePicture;
+    }
+
+    // Set isVerified conditionally
+    if (accountName && bankName && accountNumber) {
+      updatedData.isVerified = true; // Set to true only if all bank details are provided
     }
 
     // Update user in database
