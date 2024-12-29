@@ -151,7 +151,7 @@ router.post('/initialize-transaction', async (req, res) => {
                 subaccount: subaccount, // Seller's Paystack subaccount
                 transaction_charge: Math.floor((20 / 100) * amount), // Platform's 20% charge
                 bearer: 'subaccount', // Ensures seller bears the transaction charge
-                callback_url: 'http://localhost:5173/confirmationPage', // Redirect URL after payment completion
+                callback_url: `${process.env.FRONTEND_URL_PRODUCTION}/confirmationPage`, // Redirect URL after payment completion
                 metadata: {
                     redis_key,  // Store redis_key in metadata
                     rate_id      // Store rate_id in metadata
