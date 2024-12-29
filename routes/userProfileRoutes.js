@@ -83,7 +83,7 @@ router.put('/profile', protect, upload.single('image'), async (req, res) => {
     // Create a notification after profile update
     const notification = new Notification({
       userId: req.user._id,
-      message: 'You just updated your profile.',
+      message: 'Nice! You just updated your profile.',
       read: false, // Mark as unread
       timestamp: new Date(),
     });
