@@ -383,10 +383,6 @@ router.post('/donate', upload.array('images', 10), async (req, res) => {
 module.exports = router;
 
 
-
-
-
-
 // router.patch('/:id/availability', async (req, res) => {
 //   try {
 //     const product = await Product.findById(req.params.id);
