@@ -46,6 +46,10 @@ const productSchema = mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    status: { 
+      type: String, 
+      default: 'pending', 
+      enum: ['pending', 'approved', 'rejected'] },
   },
   {
     timestamps: true,
@@ -55,3 +59,5 @@ const productSchema = mongoose.Schema(
 const Product = mongoose.model('Product', productSchema);
 
 module.exports = Product;
+
+

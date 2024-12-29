@@ -128,4 +128,29 @@ router.put('/:id', upload.single('image'), async (req, res) => {
   }
 });
 
+// Update product status
+router.put('/:id/status', protectAdmin, async (req, res) => {
+  const { status } = req.body; // expected to be 'approved' or 'rejected'
+  
+  if (!['approved', 'rejected'].includes(status)) {
+    return res.status(400).json({ message: 'Invalid status value' });
+  }
+
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    product.status = status;
+    await product.save();
+
+    res.json({ message: `Product status updated to ${status}`, product });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Failed to update product status' });
+  }
+});
+
+
 module.exports = router;

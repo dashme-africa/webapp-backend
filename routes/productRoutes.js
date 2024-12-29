@@ -4,6 +4,8 @@ const Product = require('../models/Product');
 const multer = require('multer');
 const User = require('../models/User');
 const cloudinary = require('cloudinary').v2;
+const Notification = require('../models/Notification');
+const AdminNotification = require('../models/AdminNotification');
 
 require('dotenv').config();
 
@@ -279,10 +281,31 @@ router.post('/', upload.array('images', 10), async (req, res) => {
       uploader,
       tag: 'For sale',
       availability: true,
+      status: 'pending', // Default status
     });
 
     const createdProduct = await product.save();
+
     res.status(201).json(createdProduct);
+
+    console.log()
+
+    // Create a notification after profile update
+    const notification = new Notification({
+      userId: uploader,
+      message: 'Your product would undergo review.',
+      read: false, // Mark as unread
+      timestamp: new Date(),
+    });
+    await notification.save();  // Save notification to DB
+
+    // Create admin notification
+    await AdminNotification.create({
+      type: 'product_pending',
+      message: `A new product "${createdProduct.title}" is pending approval.`,
+      productId: createdProduct._id,
+    });
+
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
@@ -343,6 +366,7 @@ router.post('/donate', upload.array('images', 10), async (req, res) => {
       uploader,
       tag: 'Donate',
       availability: true,
+      status: 'pending', // Default status
     });
 
     const createdProduct = await product.save();
