@@ -26,10 +26,13 @@ const productSchema = mongoose.Schema(
       },
     },
     images: {
-      type: [String], // Array to store multiple image URLs
+      type: [String], 
     },
     primaryImage: {
-      type: String, // URL of the primary image
+      type: String, 
+    },
+    videoUrl: {
+      type: String, 
     },
     location: {
       type: String,
