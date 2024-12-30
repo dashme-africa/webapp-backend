@@ -81,6 +81,12 @@ router.post('/', fileUploadMiddleware, async (req, res) => {
     return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
   }
 
+  // Validate image file sizes (10MB limit)
+  const oversizedFiles = req.files.images.filter((file) => file.size > 10 * 1024 * 1024);
+  if (oversizedFiles.length > 0) {
+    return res.status(400).json({ message: 'Image file size should not exceed 10MB' });
+  }
+
   if (primaryImageIndex === undefined || primaryImageIndex < 0 || primaryImageIndex >= req.files.images.length) {
     return res.status(400).json({ message: 'Please select a primary image for display' });
   }
@@ -106,13 +112,15 @@ router.post('/', fileUploadMiddleware, async (req, res) => {
         const stream = cloudinary.uploader.upload_stream(
           { resource_type: 'image' },
           (error, result) => {
+            console.log('Upload response for images:', { error, result });
             if (error) reject(error);
-            resolve(result.secure_url);
+            else resolve(result.secure_url);
           }
         );
         require('streamifier').createReadStream(file.buffer).pipe(stream);
       });
     });
+    
 
     const uploadedImages = await Promise.all(imageUploadPromises);
     const primaryImage = uploadedImages[primaryImageIndex] || uploadedImages[0];
@@ -124,6 +132,7 @@ router.post('/', fileUploadMiddleware, async (req, res) => {
         const stream = cloudinary.uploader.upload_stream(
           { resource_type: 'video' },
           (error, result) => {
+            console.log('Upload response for video:', { error, result });
             if (error) reject(error);
             resolve(result.secure_url);
           }
@@ -178,70 +187,6 @@ router.post('/', fileUploadMiddleware, async (req, res) => {
 // @desc Create a new product to donate
 // @route POST /api/products/donate
 // @access Public
-router.post('/donated', upload.array('images', 10), async (req, res) => {
-
-  const { title, description, category, location, uploader, primaryImageIndex } = req.body;
-
-  if (!title || !category || !location || !uploader) {
-    return res.status(400).json({ message: 'Please fill all required fields' });
-  }
-
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ message: 'Please upload at least one product image' });
-  }
-
-  // Backend validation for maximum 10 images
-  if (req.files.length > 10) {
-    return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
-  }
-
-  if (primaryImageIndex === undefined || primaryImageIndex < 0 || primaryImageIndex >= req.files.length) {
-    return res.status(400).json({ message: 'Please select a primary image for display' });
-  }
-
-  try {
-    const user = await User.findById(uploader);
-    if (!user) return res.status(404).json({ message: 'Uploader not found' });
-    if (!user.isVerified) return res.status(403).json({ message: 'Verify your bank details first.' });
-
-    // Upload images to Cloudinary
-    const imageUploadPromises = req.files.map((file) => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { resource_type: 'image' },
-          (error, result) => {
-            if (error) reject(error);
-            resolve(result.secure_url);
-          }
-        );
-        require('streamifier').createReadStream(file.buffer).pipe(stream);
-      });
-    });
-
-    const uploadedImages = await Promise.all(imageUploadPromises);
-    const primaryImage = uploadedImages[primaryImageIndex] || uploadedImages[0];
-
-    // Create product document
-    const product = new Product({
-      title,
-      description,
-      category,
-      images: uploadedImages,
-      primaryImage,
-      location,
-      uploader,
-      tag: 'Donate',
-      availability: true,
-      status: 'pending', 
-    });
-
-    const createdProduct = await product.save();
-    res.status(201).json(createdProduct);
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error: error.message });
-  }
-});
-
 router.post('/donate', fileUploadMiddleware, async (req, res) => {
   const { title, description, category, location, uploader, primaryImageIndex } = req.body;
 
