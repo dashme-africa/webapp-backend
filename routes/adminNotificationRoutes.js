@@ -5,7 +5,7 @@ const { protectAdmin } = require('../middleware/adminMiddleware');
 
 
 // Fetch notifications for the logged-in admin
-router.get('/notifications', async (req, res) => {
+router.get('/notifications', protectAdmin, async (req, res) => {
     try {
         // Assuming the logged-in admin's userId is attached to req.user
 
