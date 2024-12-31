@@ -95,9 +95,6 @@ router.post('/logout', (req, res) => {
   res.json({ message: 'User logged out' });
 });
 
-
-
-
 // Configure nodemailer transporter for sending emails
 const transporter = nodemailer.createTransport({
   service: 'gmail',
