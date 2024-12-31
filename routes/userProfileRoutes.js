@@ -27,7 +27,7 @@ router.get('/profile', protect, async (req, res) => {
 
 router.put('/profile', protect, upload.single('image'), async (req, res) => {
   try {
-    const { fullName, username, email, address, bio, accountName, bankName, accountNumber, isVerified } = req.body;
+    const { fullName, username, email, phoneNumber, address, bio, accountName, bankName, accountNumber } = req.body;
 
     // Validation for required fields
     if (!fullName || !username || !email) {
@@ -70,6 +70,7 @@ router.put('/profile', protect, upload.single('image'), async (req, res) => {
       accountName,
       bankName,
       accountNumber,
+      phoneNumber,
     };
 
     if (profilePicture) {

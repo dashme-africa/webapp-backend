@@ -29,6 +29,9 @@ const userSchema = mongoose.Schema(
     address: {
       type: String,
     },
+    phoneNumber: {
+      type: String,
+    },
     accountName: {
       type: String,
     },
