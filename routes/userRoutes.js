@@ -170,9 +170,7 @@ router.post("/reset-password", async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired token." });
     }
 
-    // Hash the new password
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
+    user.password = password;
 
     // Clear the reset token and expiration fields
     user.resetPasswordToken = undefined;
