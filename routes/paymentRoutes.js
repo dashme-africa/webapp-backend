@@ -126,6 +126,7 @@ router.post('/subaccount', async (req, res) => {
             }
         );
         res.status(201).json(response.data);
+        console.log(response.data);
     } catch (error) {
         console.error('Error creating subaccount:', error.response?.data || error.message);
         res.status(500).json({ message: 'Failed to create subaccount', error: error.response?.data });
@@ -166,6 +167,7 @@ router.post('/initialize-transaction', async (req, res) => {
         );
 
         res.status(201).json(response.data);
+        console.log("initi", response.data);
     } catch (error) {
         console.error('Error initializing transaction:', error.response?.data || error.message);
         res.status(500).json({

@@ -112,7 +112,7 @@ router.post('/', fileUploadMiddleware, async (req, res) => {
         const stream = cloudinary.uploader.upload_stream(
           { resource_type: 'image' },
           (error, result) => {
-            console.log('Upload response for images:', { error, result });
+            // console.log('Upload response for images:', { error, result });
             if (error) reject(error);
             else resolve(result.secure_url);
           }

@@ -254,8 +254,6 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
 app.get('/api/transaction/verify/:reference', async (req, res) => {
   const { reference } = req.params;
 
-  console.log('Transaction reference:', reference);
-
   try {
     const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
       headers: {
@@ -285,12 +283,11 @@ app.get('/api/transaction/verify/:reference', async (req, res) => {
         paidAt: transactionData.paid_at,
         gatewayResponse: transactionData.gateway_response,
       });
-      console.log('Transaction to be saved successfully:', newTransaction);
 
       try {
 
         await newTransaction.save();
-        console.log('Transaction saved successfully:', newTransaction);
+        // console.log('Transaction saved successfully:', newTransaction);
 
         res.status(200).json({ message: 'Transaction verified and saved', data: newTransaction });
       } catch (saveError) {

@@ -5,11 +5,11 @@ const { protectAdmin } = require('../middleware/adminMiddleware');
 
 
 // Fetch notifications for the logged-in admin
-router.get('/notifications', protectAdmin, async (req, res) => {
+router.get('/notifications', async (req, res) => {
     try {
         // Assuming the logged-in admin's userId is attached to req.user
 
-        const notifications = await AdminNotification.find({ read: false }) 
+        const notifications = await AdminNotification.find() 
             .sort({ createdAt: -1 }) // Sort by latest notifications first
 
         res.status(200).json({
@@ -23,11 +23,11 @@ router.get('/notifications', protectAdmin, async (req, res) => {
 });
 
 // Mark all notifications as read
-router.patch('/notifications/mark-read', protectAdmin, async (req, res) => {
+router.patch('/notifications/mark-all-read', protectAdmin, async (req, res) => {
     try {
-        const adminId = req.admin.id; // Extract the user ID from the request object
-        await AdminNotification.updateMany({ adminId, read: false }, { $set: { read: true } });
+        await AdminNotification.updateMany({ read: false }, { $set: { read: true } });
 
+        console.log()
         res.status(200).json({
             message: 'All notifications marked as read',
         });
