@@ -32,12 +32,12 @@ router.post('/login', async (req, res) => {
 });
 
 // Admin Registration Route
-router.post('/register', async (req, res) => {
+// router.post('/register', async (req, res) => {
   // const { email, password } = req.body;
 
-  return res
-		.status(401)
-		.json({ ok: true, message: "You are not authorised to register as admin" });
+  // return res
+	// 	.status(401)
+	// 	.json({ ok: true, message: "You are not authorised to register as admin" });
 
   // if (!email || !password) {
   //   return res.status(400).json({ message: 'Please provide email and password' });
@@ -63,6 +63,6 @@ router.post('/register', async (req, res) => {
   // } catch (error) {
   //   res.status(500).json({ message: error.message });
   // }
-});
+// });
 
 module.exports = router;
