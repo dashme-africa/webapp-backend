@@ -5,6 +5,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const Product = require("../models/Product");
 
 require('dotenv').config();
 
@@ -183,6 +184,30 @@ router.post("/reset-password", async (req, res) => {
   } catch (error) {
     console.error("Error in reset-password:", error.message);
     res.status(500).json({ message: "Internal server error." });
+  }
+});
+
+router.get("/message-profile", async (req, res) => {
+  const username = req.query.username;
+
+  if (!username)
+    return res.status(401).json({ ok: false, message: "User not found" });
+
+  try {
+    const userProfile = await User.findOne({ username });
+
+    const products = await Product.find({ uploader: userProfile._id });
+
+    if (!userProfile)
+      return res.status(401).json({ ok: false, message: "User not found" });
+
+    return res.status(200).json({
+      ok: true,
+      message: "Fetched",
+      data: { ...userProfile._doc, products },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
