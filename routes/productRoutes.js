@@ -6,7 +6,6 @@ const User = require('../models/User');
 const cloudinary = require('cloudinary').v2;
 const Notification = require('../models/Notification');
 const AdminNotification = require('../models/AdminNotification');
-const { useLocation } = require('react-router-dom');
 
 require('dotenv').config();
 
