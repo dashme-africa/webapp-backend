@@ -69,7 +69,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', fileUploadMiddleware, async (req, res) => {
   const { title, description, category, price, priceCategory, location, uploader, primaryImageIndex } = req.body;
 
-  if (!title || !category || !price || !uploader) {
+  if (!title || !category || !price ) {
     return res.status(400).json({ message: 'Please fill all required fields' });
   }
 
