@@ -24,21 +24,32 @@ const productSchema = mongoose.Schema(
       required: function () {
         return this.tag !== 'Donate';
       },
+    }, 
+    specification: {
+      type: String,
+      required: true,
+    },  
+    condition: {
+      type: String,
+      required: true,
     },
     images: {
       type: [String], 
     },
     primaryImage: {
       type: String, 
+      required: true,
     },
     videoUrl: {
       type: String, 
     },
     location: {
       type: String,
+      required: true,
     },
     tag: {
       type: String,
+      required: true,
     },
     uploader: {
       type: mongoose.Schema.Types.ObjectId,

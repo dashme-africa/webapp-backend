@@ -6,6 +6,7 @@ const User = require('../models/User');
 const cloudinary = require('cloudinary').v2;
 const Notification = require('../models/Notification');
 const AdminNotification = require('../models/AdminNotification');
+const { useLocation } = require('react-router-dom');
 
 require('dotenv').config();
 
@@ -67,9 +68,9 @@ router.get('/:id', async (req, res) => {
 // @route POST /api/products
 // @access Public
 router.post('/', fileUploadMiddleware, async (req, res) => {
-  const { title, description, category, price, priceCategory, location, uploader, primaryImageIndex } = req.body;
+  const { title, description, category, price, priceCategory, location, uploader, primaryImageIndex, specification, condition } = req.body;
 
-  if (!title || !category || !price ) {
+  if (!title || !description || !category || !price || !priceCategory || !location || !specification || !condition  ) {
     return res.status(400).json({ message: 'Please fill all required fields' });
   }
 
@@ -158,6 +159,8 @@ router.post('/', fileUploadMiddleware, async (req, res) => {
       availability: true,
       status: 'pending', // Default status
       videoUrl, // Add the video URL
+      specification,  
+      condition, 
     });
 
     const createdProduct = await product.save();
