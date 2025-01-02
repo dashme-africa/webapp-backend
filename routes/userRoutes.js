@@ -20,6 +20,27 @@ const generateToken = (id) => {
 router.post('/register', async (req, res) => {
   const { fullName, username, email, password, confirmPassword } = req.body;
 
+  // Validate reCAPTCHA
+  try {
+    const verifyResponse = await axios.post(
+      `https://www.google.com/recaptcha/api/siteverify`,
+      null,
+      {
+        params: {
+          secret: "6LcNPqwqAAAAAAsOmBA8ZuKjnKT7aSRg3BIZ8eCd", // Secret key
+          response: captchaToken,
+        },
+      }
+    );
+
+    if (!verifyResponse.data.success) {
+      return res.status(400).json({ message: "Captcha verification failed." });
+    }
+  } catch (error) {
+    console.error("Error verifying captcha:", error.message);
+    return res.status(500).json({ message: "Captcha verification failed." });
+  }
+
   // Validate input
   if (!fullName || !username || !email || !password || !confirmPassword) {
     return res.status(400).json({ message: 'Please provide all fields.' });
