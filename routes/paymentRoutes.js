@@ -150,7 +150,7 @@ router.post('/initialize-transaction', async (req, res) => {
                 email, // Buyer's email
                 amount, // Total amount (in kobo, so multiply Naira by 100)
                 subaccount: subaccount, // Seller's Paystack subaccount
-                transaction_charge: Math.floor((5 / 100) * amount), // Platform's 5% charge
+                transaction_charge: Math.floor((10 / 100) * amount), // Platform's 5% charge
                 bearer: 'subaccount', // Ensures seller bears the transaction charge
                 callback_url: `${process.env.FRONTEND_URL_PRODUCTION}/confirmationPage`, // Redirect URL after payment completion
                 metadata: {

@@ -38,7 +38,7 @@ router.post('/register', async (req, res) => {
     }
   } catch (error) {
     console.error("Error verifying captcha:", error.message);
-    return res.status(500).json({ message: "Captcha verification failed." });
+    return res.status(500).json({ message: "Error in captcha verification." });
   }
 
   // Validate input

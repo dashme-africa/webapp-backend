@@ -172,11 +172,89 @@ app.get('/api/track-shipment/:reference', async (req, res) => {
   }
 });
 
-// Transaction verification route
+// Verification payment route
+// app.get('/api/verify-transaction/:reference', async (req, res) => {
+//   const { reference } = req.params;
+
+//   try {
+//     // Verify the Paystack transaction
+//     const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
+//       headers: {
+//         Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+//       },
+//     });
+
+//     // Ensure the transaction was successful
+//     if (response.data.data.status === 'success') {
+//       const transactionData = response.data.data;
+//       const { redis_key, rate_id } = transactionData.metadata;
+
+//       // Prepare the booking payload
+//       const bookingPayload = {
+//         redis_key,
+//         rate_id,
+//         user_id: process.env.GOSHIP_USER_ID,
+//         platform: 'web2',
+//         delivery_note: 'Your delivery is on the way',
+//       };
+
+//       // console.log('Booking Request Payload:', bookingPayload);
+//       let bookingResponse = null;
+//       try {
+//         // Make the booking API request
+//         bookingResponse = await axios.post(
+//           `${process.env.GOSHIIP_BASE_URL}/bookshipment`,
+//           bookingPayload,
+//           {
+//             headers: {
+//               Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
+//             },
+//           }
+//         );
+
+//         // console.log('Booking Response Status:', bookingResponse.status);
+//         // console.log('Booking Response Data:', bookingResponse.data);
+
+//         // Handle booking success/failure independently
+//         if (!bookingResponse.data.status) {
+//           // If booking fails, log the error but do not stop the transaction status display
+//           // console.log('Booking failed:', bookingResponse.data.message || 'Unknown error');
+//         }
+//       } catch (error) {
+//         // Log error in booking process but do not affect transaction status display
+//         console.error('Error booking shipment:', error.response ? error.response.data : error.message);
+//       }
+
+//       // console.log(transactionData.metadata)
+//       // Send successful transaction details regardless of booking status
+//       res.status(200).json({
+//         message: 'Payment successful.',
+//         transactionDetails: {
+//           amount: transactionData.amount,
+//           status: transactionData.status,
+//           paymentMethod: transactionData.channel,
+//           currency: transactionData.currency,
+//           paidAt: transactionData.paid_at,
+//           shipmentReference: transactionData.metadata,
+//         },
+//         bookingStatus: bookingResponse ? bookingResponse.data.message : 'Failed to book shipment',
+//       });
+
+//       // res.status(200).json(response.data.data);
+//     } else {
+//       res.status(400).json({ error: 'Transaction verification failed.' });
+//     }
+//   } catch (err) {
+//     console.error('Error verifying transaction:', err.message);
+//     res.status(500).json({ error: 'Error verifying the transaction.', details: err.message });
+//   }
+// });
 app.get('/api/verify-transaction/:reference', async (req, res) => {
   const { reference } = req.params;
 
   try {
+    console.log(`Starting transaction verification for reference: ${reference}`);
+
     // Verify the Paystack transaction
     const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
       headers: {
@@ -184,9 +262,13 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
       },
     });
 
+    console.log('Transaction verification response:', response.data);
+
     // Ensure the transaction was successful
     if (response.data.data.status === 'success') {
       const transactionData = response.data.data;
+      console.log('Transaction data:', transactionData);
+
       const { redis_key, rate_id } = transactionData.metadata;
 
       // Prepare the booking payload
@@ -198,10 +280,13 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
         delivery_note: 'Your delivery is on the way',
       };
 
-      // console.log('Booking Request Payload:', bookingPayload);
+      console.log('Booking payload:', bookingPayload);
+
       let bookingResponse = null;
+
       try {
         // Make the booking API request
+        console.log('Sending booking request...');
         bookingResponse = await axios.post(
           `${process.env.GOSHIIP_BASE_URL}/bookshipment`,
           bookingPayload,
@@ -212,36 +297,78 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
           }
         );
 
-        // console.log('Booking Response Status:', bookingResponse.status);
-        // console.log('Booking Response Data:', bookingResponse.data);
+        console.log('Booking response:', bookingResponse.data);
 
-        // Handle booking success/failure independently
-        if (!bookingResponse.data.status) {
-          // If booking fails, log the error but do not stop the transaction status display
-          // console.log('Booking failed:', bookingResponse.data.message || 'Unknown error');
+        // Check if booking was successful
+        if (bookingResponse.data.status) {
+          const shipmentId = bookingResponse.data.data.shipmentId; // Get the shipment ID
+          console.log(`Booking successful. Shipment ID: ${shipmentId}`);
+
+          try {
+            // Trigger the Assign API with shipment_id in the body
+            console.log(`Triggering Assign API for shipment ID: ${shipmentId}`);
+            const assignPayload = {
+              shipment_id: shipmentId,
+            };
+
+            const assignResponse = await axios.post(
+              `${process.env.GOSHIIP_BASE_URL}/shipment/assign`,
+              assignPayload,
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
+                },
+              }
+            );
+
+            console.log('Assign response:', assignResponse.data);
+
+            // Handle assign response
+            if (assignResponse.status === 200) {
+              console.log('Shipment assignment successful.');
+              res.status(200).json({
+                message: 'Payment verified, shipment booked, and assignment successful.',
+                transactionDetails: {
+                  amount: transactionData.amount,
+                  status: transactionData.status,
+                  paymentMethod: transactionData.channel,
+                  currency: transactionData.currency,
+                  paidAt: transactionData.paid_at,
+                  shipmentId, // Return shipmentId instead of shipmentReference
+                },
+                bookingStatus: bookingResponse.data.message,
+                assignStatus: assignResponse.data.message,
+              });
+            } else {
+              console.log('Assignment failed:', assignResponse.data.message);
+              res.status(assignResponse.status).json({
+                message: 'Shipment booked but assignment failed.',
+                assignStatus: assignResponse.data.message,
+              });
+            }
+          } catch (error) {
+            console.error('Error assigning shipment:', error.response ? error.response.data : error.message);
+            res.status(500).json({
+              message: 'Shipment booked, but failed to trigger assignment.',
+              error: error.message,
+            });
+          }
+        } else {
+          console.log('Booking failed:', bookingResponse.data.message);
+          res.status(400).json({
+            message: 'Booking failed.',
+            bookingStatus: bookingResponse.data.message,
+          });
         }
       } catch (error) {
-        // Log error in booking process but do not affect transaction status display
         console.error('Error booking shipment:', error.response ? error.response.data : error.message);
+        res.status(500).json({
+          message: 'Error occurred during booking process.',
+          error: error.message,
+        });
       }
-
-      // console.log(transactionData.metadata)
-      // Send successful transaction details regardless of booking status
-      res.status(200).json({
-        message: 'Payment successful.',
-        transactionDetails: {
-          amount: transactionData.amount,
-          status: transactionData.status,
-          paymentMethod: transactionData.channel,
-          currency: transactionData.currency,
-          paidAt: transactionData.paid_at,
-          shipmentReference: transactionData.metadata,
-        },
-        bookingStatus: bookingResponse ? bookingResponse.data.message : 'Failed to book shipment',
-      });
-
-      // res.status(200).json(response.data.data);
     } else {
+      console.log('Transaction verification failed:', response.data.data.status);
       res.status(400).json({ error: 'Transaction verification failed.' });
     }
   } catch (err) {
@@ -250,7 +377,11 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
   }
 });
 
-// Transaction route
+
+
+
+
+// Get Transaction by reference
 app.get('/api/transaction/verify/:reference', async (req, res) => {
   const { reference } = req.params;
 
@@ -303,7 +434,8 @@ app.get('/api/transaction/verify/:reference', async (req, res) => {
   }
 });
 
-app.get('/api/transactions', protect, async (req, res) => {
+// Get all Transactions
+app.get('/api/transactions', async (req, res) => {
   try {
     // Replace with the logged-in user's email or ID
     const customerEmail = req.user.email;
@@ -318,6 +450,118 @@ app.get('/api/transactions', protect, async (req, res) => {
   } catch (error) {
     console.error('Error fetching transactions:', error.message);
     res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
+
+// Track Shipment Endpoint
+app.get('/api/track-shipment/:reference', async (req, res) => {
+  const { reference } = req.params;
+
+  if (!reference) {
+    return res.status(400).json({
+      status: false,
+      message: 'Shipment reference is required.',
+    });
+  }
+
+  try {
+    // Call the GoShiip API to track shipment
+    const response = await axios.get(`${process.env.GOSHIIP_BASE_URL}/shipment/track/${reference}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.GOSHIIP_API_KEY}`,
+      },
+    });
+
+    if (response.data.status) {
+      // Format and send the shipment tracking data
+      res.status(200).json({
+        status: true,
+        message: response.data.message,
+        data: response.data.data,
+      });
+      console.log('Shipment tracking data:', response.data.data);
+    } else {
+      // Handle API response errors
+      res.status(404).json({
+        status: false,
+        message: response.data.message || 'Shipment not found.',
+      });
+    }
+  } catch (error) {
+    // Log and handle errors
+    console.error('Error tracking shipment:', error.response?.data || error.message);
+    res.status(500).json({
+      status: false,
+      message: 'Internal server error.',
+      error: error.response?.data || error.message,
+    });
+  }
+});
+
+// Get all shipments
+app.get("/api/shipments", async (req, res) => {
+  const { status } = req.query; // Optional status filter (e.g., "pending", "in progress", etc.)
+  const apiUrl = `https://delivery-staging.apiideraos.com/api/v2/token/user/allorders${
+    status ? `?status=${status}` : ""
+  }`;
+
+  const headers = {
+    Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`, // Replace "Secret Key" with your actual API key
+  };
+
+  try {
+    const response = await axios.get(apiUrl, { headers });
+
+    if (response.status === 200) {
+      res.status(200).json({
+        message: "Shipments fetched successfully",
+        data: response.data.data,
+      });
+    } else {
+      res.status(response.status).json({
+        message: data.message || "Failed to fetch shipments",
+        status: response.data.status,
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching shipments:", error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+});
+
+// Cancel a shipment
+app.get("/api/shipments/cancel/:reference", async (req, res) => {
+  const { reference } = req.params; // Shipment reference from the request parameters
+  const apiUrl = `https://delivery-staging.apiideraos.com/api/v2/token/shipment/cancel/${reference}`;
+
+  const headers = {
+    Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`, // Replace with your actual API key
+  };
+
+  try {
+    const response = await axios.get(apiUrl, { headers });
+
+    if (response.status === 200) {
+      res.status(200).json({
+        message: "Shipment cancellation request sent successfully",
+        data: response.data.data,
+        status: response.data.status,
+      });
+    } else {
+      res.status(response.status).json({
+        message: response.data.message || "Failed to cancel shipment",
+        status: response.data.status,
+      });
+    }
+  } catch (error) {
+    console.error("Error canceling shipment:", error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 });
 
