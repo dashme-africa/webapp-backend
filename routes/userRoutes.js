@@ -20,6 +20,8 @@ const generateToken = (id) => {
 // @route POST /api/users/register
 router.post('/register', async (req, res) => {
   const { fullName, username, email, password, confirmPassword } = req.body;
+  const captchaToken = req.body.captchaToken; // Define captchaToken variable
+
 
   // Validate reCAPTCHA
   try {
