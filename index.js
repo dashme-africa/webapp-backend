@@ -435,7 +435,7 @@ app.get('/api/transaction/verify/:reference', async (req, res) => {
 });
 
 // Get all Transactions
-app.get('/api/transactions', async (req, res) => {
+app.get('/api/transactions', protect, async (req, res) => {
   try {
     // Replace with the logged-in user's email or ID
     const customerEmail = req.user.email;
