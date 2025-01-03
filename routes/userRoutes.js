@@ -5,6 +5,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const axios = require('axios');
 const Product = require("../models/Product");
 
 require('dotenv').config();
