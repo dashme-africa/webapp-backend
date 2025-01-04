@@ -47,17 +47,6 @@ const corsOptions = {
   maxAge: 3600, // Add this option to specify the maximum age of the CORS configuration
 };
 
-// {
-//   "version": 2,
-//   "builds": [
-//     { "src": "index.js", "use": "@vercel/node" }
-//   ],
-//   "routes": [
-//     { "src": "/api/(.*)", "dest": "/index.js" }
-//   ]
-// }
-
-
 app.use(cors(corsOptions));
 
 // MongoDB Connection

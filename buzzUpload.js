@@ -4,7 +4,6 @@ const Product = require('../models/Product');
 const multer = require('multer');
 const User = require('../models/User');
 const cloudinary = require('cloudinary').v2;
-const streamifier = require('streamifier');
 const Notification = require('../models/Notification');
 const AdminNotification = require('../models/AdminNotification');
 
@@ -18,7 +17,13 @@ cloudinary.config({
 });
 
 // Multer memory storage
-const upload = multer();
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+const fileUploadMiddleware = upload.fields([
+  { name: 'images', maxCount: 10 }, // Handle up to 10 images
+  { name: 'video', maxCount: 1 },   // Handle a single video
+]);
 
 // @desc Get all products or filter by category
 // @route GET /api/products
@@ -61,36 +66,38 @@ router.get('/:id', async (req, res) => {
 // @desc Create a new product for sale
 // @route POST /api/products
 // @access Public
-// Direct upload handler
-router.post('/', upload.fields([{ name: 'images', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
-  const {
-    title, description, category, price, priceCategory, location,
-    uploader, primaryImageIndex, specification, condition,
-  } = req.body;
+router.post('/', fileUploadMiddleware, async (req, res) => {
+  const { title, description, category, price, priceCategory, location, uploader, primaryImageIndex, specification, condition } = req.body;
 
-  if (!title || !description || !category || !price || !priceCategory || !location || !specification || !condition) {
+  if (!title || !description || !category || !price || !priceCategory || !location || !specification || !condition  ) {
     return res.status(400).json({ message: 'Please fill all required fields' });
   }
 
-  const images = req.files?.images || [];
-  if (images.length === 0) return res.status(400).json({ message: 'Please upload at least one product image' });
-  if (images.length > 10) return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
+  if (!req.files || !req.files.images || req.files.images.length === 0) {
+    return res.status(400).json({ message: 'Please upload at least one product image' });
+  }
 
-  const oversizedFiles = images.filter((file) => file.size > 10 * 1024 * 1024);
+  if (req.files.images.length > 10) {
+    return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
+  }
+
+  // Validate image file sizes (10MB limit)
+  const oversizedFiles = req.files.images.filter((file) => file.size > 10 * 1024 * 1024);
   if (oversizedFiles.length > 0) {
     return res.status(400).json({ message: 'Image file size should not exceed 10MB' });
   }
 
-  if (!primaryImageIndex || primaryImageIndex < 0 || primaryImageIndex >= images.length) {
+  if (primaryImageIndex === undefined || primaryImageIndex < 0 || primaryImageIndex >= req.files.images.length) {
     return res.status(400).json({ message: 'Please select a primary image for display' });
   }
 
-  if (['Accessories', 'Household-Items', 'Electronics'].includes(category) && (!req.files?.video || req.files.video.length === 0)) {
+  // Conditional video requirement for specific categories
+  const videoRequiredCategories = ['Accessories', 'Household-Items', 'Electronics'];
+  if (videoRequiredCategories.includes(category) && (!req.files.video || req.files.video.length === 0)) {
     return res.status(400).json({ message: 'Please upload a video for this category' });
   }
 
-  const video = req.files?.video?.[0];
-  if (video && video.size > 10 * 1024 * 1024) {
+  if (req.files.video && req.files.video[0].size > 10 * 1024 * 1024) { // 10MB limit
     return res.status(400).json({ message: 'Video file size should not exceed 10MB' });
   }
 
@@ -98,58 +105,83 @@ router.post('/', upload.fields([{ name: 'images', maxCount: 10 }, { name: 'video
     const user = await User.findById(uploader);
     if (!user) return res.status(404).json({ message: 'Uploader not found' });
 
-    // Validate user profile
+    // Validate form data
     if (!user.fullName || !user.username || !user.email || !user.address || !user.bio || !user.phoneNumber) {
       return res.status(403).json({ message: 'Please complete your profile info before uploading a product.' });
     }
 
     if (!user.isVerified) return res.status(403).json({ message: 'Verify your bank details first.' });
 
-    // Upload images directly to Cloudinary
-    const imageUploadPromises = images.map((file) => new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream({ resource_type: 'image' }, (err, result) => {
-        if (err) reject(err);
-        else resolve(result.secure_url);
+    // Upload images to Cloudinary
+    const imageUploadPromises = req.files.images.map((file) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { resource_type: 'image' },
+          (error, result) => {
+            // console.log('Upload response for images:', { error, result });
+            if (error) reject(error);
+            else resolve(result.secure_url);
+          }
+        );
+        require('streamifier').createReadStream(file.buffer).pipe(stream);
       });
-      streamifier.createReadStream(file.buffer).pipe(stream);
-    }));
+    });
+    
 
     const uploadedImages = await Promise.all(imageUploadPromises);
-    const primaryImage = uploadedImages[primaryImageIndex];
+    const primaryImage = uploadedImages[primaryImageIndex] || uploadedImages[0];
 
-    // Upload video directly to Cloudinary (if provided)
+    // Upload video to Cloudinary (if video exists)
     let videoUrl = '';
-    if (video) {
-      const videoStream = new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream({ resource_type: 'video' }, (err, result) => {
-          if (err) reject(err);
-          else resolve(result.secure_url);
-        });
-        streamifier.createReadStream(video.buffer).pipe(stream);
+    if (req.files.video) {
+      const videoUploadPromise = new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { resource_type: 'video' },
+          (error, result) => {
+            console.log('Upload response for video:', { error, result });
+            if (error) reject(error);
+            resolve(result.secure_url);
+          }
+        );
+        require('streamifier').createReadStream(req.files.video[0].buffer).pipe(stream);
       });
-      videoUrl = await videoStream;
+
+      videoUrl = await videoUploadPromise;
     }
 
     // Create product document
     const product = new Product({
-      title, description, category, price, priceCategory,
-      images: uploadedImages, primaryImage, location, uploader,
-      tag: 'For sale', availability: true, status: 'pending',
-      videoUrl, specification, condition,
+      title,
+      description,
+      category,
+      price,
+      priceCategory,
+      images: uploadedImages,
+      primaryImage,
+      location,
+      uploader,
+      tag: 'For sale',
+      availability: true,
+      status: 'pending', // Default status
+      videoUrl, // Add the video URL
+      specification,  
+      condition, 
     });
 
     const createdProduct = await product.save();
 
     res.status(201).json(createdProduct);
 
-    // Create notifications
-    await Notification.create({
+    // Create a notification for the uploader
+    const notification = new Notification({
       userId: uploader,
       message: 'Your product would undergo review.',
       read: false,
       timestamp: new Date(),
     });
+    await notification.save();
 
+    // Create an admin notification
     await AdminNotification.create({
       type: 'product_pending',
       message: `A new product "${createdProduct.title}" is pending approval.`,
@@ -159,99 +191,107 @@ router.post('/', upload.fields([{ name: 'images', maxCount: 10 }, { name: 'video
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 });
-
 
 // @desc Create a new product to donate
 // @route POST /api/products/donate
 // @access Public
-router.post('/donate', upload.fields([{ name: 'images', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
-  const {
-    title, description, category, location,
-    uploader, primaryImageIndex, specification, condition,
-  } = req.body;
+router.post('/donate', fileUploadMiddleware, async (req, res) => {
+  const { title, description, category, location, uploader, primaryImageIndex } = req.body;
 
-  if (!title || !description || !category || !location || !specification || !condition) {
+  if (!title || !category || !location || !uploader) {
     return res.status(400).json({ message: 'Please fill all required fields' });
   }
 
-  const images = req.files?.images || [];
-  if (images.length === 0) return res.status(400).json({ message: 'Please upload at least one product image' });
-  if (images.length > 10) return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
-
-  const oversizedFiles = images.filter((file) => file.size > 10 * 1024 * 1024);
-  if (oversizedFiles.length > 0) {
-    return res.status(400).json({ message: 'Image file size should not exceed 10MB' });
+  if (!req.files || !req.files.images || req.files.images.length === 0) {
+    return res.status(400).json({ message: 'Please upload at least one product image' });
   }
 
-  if (!primaryImageIndex || primaryImageIndex < 0 || primaryImageIndex >= images.length) {
+  if (req.files.images.length > 10) {
+    return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
+  }
+
+  if (primaryImageIndex === undefined || primaryImageIndex < 0 || primaryImageIndex >= req.files.images.length) {
     return res.status(400).json({ message: 'Please select a primary image for display' });
   }
 
-  if (['Accessories', 'Household-Items', 'Electronics'].includes(category) && (!req.files?.video || req.files.video.length === 0)) {
+  // Conditional video requirement for specific categories
+  const videoRequiredCategories = ['Accessories', 'Household-Items', 'Electronics'];
+  if (videoRequiredCategories.includes(category) && (!req.files.video || req.files.video.length === 0)) {
     return res.status(400).json({ message: 'Please upload a video for this category' });
   }
 
-  const video = req.files?.video?.[0];
-  if (video && video.size > 10 * 1024 * 1024) {
+  if (req.files.video && req.files.video[0].size > 10 * 1024 * 1024) { // 10MB limit
     return res.status(400).json({ message: 'Video file size should not exceed 10MB' });
   }
 
   try {
     const user = await User.findById(uploader);
     if (!user) return res.status(404).json({ message: 'Uploader not found' });
-
-    // Validate user profile
-    if (!user.fullName || !user.username || !user.email || !user.address || !user.bio || !user.phoneNumber) {
-      return res.status(403).json({ message: 'Please complete your profile info before uploading a product.' });
-    }
-
     if (!user.isVerified) return res.status(403).json({ message: 'Verify your bank details first.' });
 
-    // Upload images directly to Cloudinary
-    const imageUploadPromises = images.map((file) => new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream({ resource_type: 'image' }, (err, result) => {
-        if (err) reject(err);
-        else resolve(result.secure_url);
+    // Upload images to Cloudinary
+    const imageUploadPromises = req.files.images.map((file) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { resource_type: 'image' },
+          (error, result) => {
+            if (error) reject(error);
+            resolve(result.secure_url);
+          }
+        );
+        require('streamifier').createReadStream(file.buffer).pipe(stream);
       });
-      streamifier.createReadStream(file.buffer).pipe(stream);
-    }));
+    });
 
     const uploadedImages = await Promise.all(imageUploadPromises);
-    const primaryImage = uploadedImages[primaryImageIndex];
+    const primaryImage = uploadedImages[primaryImageIndex] || uploadedImages[0];
 
-    // Upload video directly to Cloudinary (if provided)
+    // Upload video to Cloudinary (if video exists)
     let videoUrl = '';
-    if (video) {
-      const videoStream = new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream({ resource_type: 'video' }, (err, result) => {
-          if (err) reject(err);
-          else resolve(result.secure_url);
-        });
-        streamifier.createReadStream(video.buffer).pipe(stream);
+    if (req.files.video) {
+      const videoUploadPromise = new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { resource_type: 'video' },
+          (error, result) => {
+            if (error) reject(error);
+            resolve(result.secure_url);
+          }
+        );
+        require('streamifier').createReadStream(req.files.video[0].buffer).pipe(stream);
       });
-      videoUrl = await videoStream;
+
+      videoUrl = await videoUploadPromise;
     }
 
     // Create product document
     const product = new Product({
-      title, description, category,
-      images: uploadedImages, primaryImage, location, uploader,
-      tag: 'Donate', availability: true, status: 'pending',
-      videoUrl, specification, condition,
+      title,
+      description,
+      category,
+      images: uploadedImages,
+      primaryImage,
+      location,
+      uploader,
+      tag: 'Donate',
+      availability: true,
+      status: 'pending', 
+      videoUrl, 
     });
 
     const createdProduct = await product.save();
 
     res.status(201).json(createdProduct);
 
-    // Create notifications
-    await Notification.create({
+    // Create a notification for the uploader
+    const notification = new Notification({
       userId: uploader,
       message: 'Your product would undergo review.',
       read: false,
       timestamp: new Date(),
     });
+    await notification.save();
 
+    // Create an admin notification
     await AdminNotification.create({
       type: 'product_pending',
       message: `A new product "${createdProduct.title}" is pending approval.`,
@@ -261,6 +301,8 @@ router.post('/donate', upload.fields([{ name: 'images', maxCount: 10 }, { name: 
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 });
+
+
 
 module.exports = router;
 
