@@ -104,6 +104,12 @@ router.post('/', fileUploadMiddleware, async (req, res) => {
   try {
     const user = await User.findById(uploader);
     if (!user) return res.status(404).json({ message: 'Uploader not found' });
+
+    // Validate form data
+    if (!user.fullName || !user.username || !user.email || !user.address || !user.bio || !user.phoneNumber) {
+      return res.status(403).json({ message: 'Please complete your profile info before uploading a product.' });
+    }
+
     if (!user.isVerified) return res.status(403).json({ message: 'Verify your bank details first.' });
 
     // Upload images to Cloudinary

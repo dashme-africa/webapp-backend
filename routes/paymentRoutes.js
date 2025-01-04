@@ -135,7 +135,7 @@ router.post('/subaccount', async (req, res) => {
 
 // Route to initialize transaction
 router.post('/initialize-transaction', async (req, res) => {
-    const { email, amount, subaccount, redis_key, rate_id } = req.body;
+    const { email, amount, subaccount, transaction_charge, redis_key, rate_id, rate_amount } = req.body;
 
     try {
         // Ensure all required fields are provided
@@ -150,12 +150,13 @@ router.post('/initialize-transaction', async (req, res) => {
                 email, // Buyer's email
                 amount, // Total amount (in kobo, so multiply Naira by 100)
                 subaccount: subaccount, // Seller's Paystack subaccount
-                transaction_charge: Math.floor((10 / 100) * amount), // Platform's 5% charge
+                transaction_charge, // Platform's 10% charge
                 bearer: 'subaccount', // Ensures seller bears the transaction charge
                 callback_url: `${process.env.FRONTEND_URL_PRODUCTION}/confirmationPage`, // Redirect URL after payment completion
                 metadata: {
                     redis_key,  // Store redis_key in metadata
-                    rate_id      // Store rate_id in metadata
+                    rate_id,      // Store rate_id in metadata
+                    rate_amount,
                 }
             },
             {
