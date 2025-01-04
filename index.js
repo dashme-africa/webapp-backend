@@ -106,6 +106,24 @@ const CONSTANT_PARCELS = {
   height: 5,
 };
 
+app.post('/api/orders', async (req, res) => {
+  const { userId, items, amount, paymentReference } = req.body;
+
+  try {
+    const newOrder = new Order({
+      userId,
+      items,
+      amount,
+      paymentReference,
+    });
+    const savedOrder = await newOrder.save();
+    res.status(201).json({ message: 'Order created successfully', order: savedOrder });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating order', error: error.message });
+  }
+});
+
+
 // Get single rate for a specific courier
 app.post("/api/rates", async (req, res) => {
   const { carrierName, type, toAddress, fromAddress, parcels, items } = req.body;
@@ -173,82 +191,6 @@ app.get('/api/track-shipment/:reference', async (req, res) => {
 });
 
 // Verification payment route
-// app.get('/api/verify-transaction/:reference', async (req, res) => {
-//   const { reference } = req.params;
-
-//   try {
-//     // Verify the Paystack transaction
-//     const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
-//       headers: {
-//         Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-//       },
-//     });
-
-//     // Ensure the transaction was successful
-//     if (response.data.data.status === 'success') {
-//       const transactionData = response.data.data;
-//       const { redis_key, rate_id } = transactionData.metadata;
-
-//       // Prepare the booking payload
-//       const bookingPayload = {
-//         redis_key,
-//         rate_id,
-//         user_id: process.env.GOSHIP_USER_ID,
-//         platform: 'web2',
-//         delivery_note: 'Your delivery is on the way',
-//       };
-
-//       // console.log('Booking Request Payload:', bookingPayload);
-//       let bookingResponse = null;
-//       try {
-//         // Make the booking API request
-//         bookingResponse = await axios.post(
-//           `${process.env.GOSHIIP_BASE_URL}/bookshipment`,
-//           bookingPayload,
-//           {
-//             headers: {
-//               Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
-//             },
-//           }
-//         );
-
-//         // console.log('Booking Response Status:', bookingResponse.status);
-//         // console.log('Booking Response Data:', bookingResponse.data);
-
-//         // Handle booking success/failure independently
-//         if (!bookingResponse.data.status) {
-//           // If booking fails, log the error but do not stop the transaction status display
-//           // console.log('Booking failed:', bookingResponse.data.message || 'Unknown error');
-//         }
-//       } catch (error) {
-//         // Log error in booking process but do not affect transaction status display
-//         console.error('Error booking shipment:', error.response ? error.response.data : error.message);
-//       }
-
-//       // console.log(transactionData.metadata)
-//       // Send successful transaction details regardless of booking status
-//       res.status(200).json({
-//         message: 'Payment successful.',
-//         transactionDetails: {
-//           amount: transactionData.amount,
-//           status: transactionData.status,
-//           paymentMethod: transactionData.channel,
-//           currency: transactionData.currency,
-//           paidAt: transactionData.paid_at,
-//           shipmentReference: transactionData.metadata,
-//         },
-//         bookingStatus: bookingResponse ? bookingResponse.data.message : 'Failed to book shipment',
-//       });
-
-//       // res.status(200).json(response.data.data);
-//     } else {
-//       res.status(400).json({ error: 'Transaction verification failed.' });
-//     }
-//   } catch (err) {
-//     console.error('Error verifying transaction:', err.message);
-//     res.status(500).json({ error: 'Error verifying the transaction.', details: err.message });
-//   }
-// });
 app.get('/api/verify-transaction/:reference', async (req, res) => {
   const { reference } = req.params;
 
@@ -376,10 +318,6 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
     res.status(500).json({ error: 'Error verifying the transaction.', details: err.message });
   }
 });
-
-
-
-
 
 // Get Transaction by reference
 app.get('/api/transaction/verify/:reference', async (req, res) => {
