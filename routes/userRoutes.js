@@ -20,29 +20,29 @@ const generateToken = (id) => {
 // @route POST /api/users/register
 router.post('/register', async (req, res) => {
   const { fullName, username, email, password, confirmPassword } = req.body;
-  const captchaToken = req.body.captchaToken; // Define captchaToken variable
+  // const captchaToken = req.body.captchaToken; // Define captchaToken variable
 
 
   // Validate reCAPTCHA
-  try {
-    const verifyResponse = await axios.post(
-      `https://www.google.com/recaptcha/api/siteverify`,
-      null,
-      {
-        params: {
-          secret: "6LcNPqwqAAAAAAsOmBA8ZuKjnKT7aSRg3BIZ8eCd", // Secret key
-          response: captchaToken,
-        },
-      }
-    );
+  // try {
+  //   const verifyResponse = await axios.post(
+  //     `https://www.google.com/recaptcha/api/siteverify`,
+  //     null,
+  //     {
+  //       params: {
+  //         secret: "6LcNPqwqAAAAAAsOmBA8ZuKjnKT7aSRg3BIZ8eCd", // Secret key
+  //         response: captchaToken,
+  //       },
+  //     }
+  //   );
 
-    if (!verifyResponse.data.success) {
-      return res.status(400).json({ message: "Captcha verification failed." });
-    }
-  } catch (error) {
-    console.error("Error verifying captcha:", error.message);
-    return res.status(500).json({ message: "Error in captcha verification." });
-  }
+  //   if (!verifyResponse.data.success) {
+  //     return res.status(400).json({ message: "Captcha verification failed." });
+  //   }
+  // } catch (error) {
+  //   console.error("Error verifying captcha:", error.message);
+  //   return res.status(500).json({ message: "Error in captcha verification." });
+  // }
 
   // Validate input
   if (!fullName || !username || !email || !password || !confirmPassword) {
