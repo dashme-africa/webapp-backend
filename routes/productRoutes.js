@@ -66,9 +66,6 @@ router.post('/', async (req, res) => {
     video,
   } = req.body;
 
-
-  console.log(req.body);
-
   // Validation for required fields
   if (!title || !description || !category || !price || !priceCategory || !location || !specification || !condition) {
     return res.status(400).json({ message: 'Please fill all required fields' });
@@ -85,7 +82,8 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
   }
 
-  if (!primaryImageIndex || primaryImageIndex < 0 || primaryImageIndex >= imagesArray.length) {
+
+  if (primaryImageIndex === null || primaryImageIndex === undefined) {
     return res.status(400).json({ message: 'Please select a primary image for display' });
   }
 
@@ -111,7 +109,7 @@ router.post('/', async (req, res) => {
     // Save product to the database
     const product = new Product({
       title, description, category, price, priceCategory,
-      images: imagesArray, primaryImage: imagesArray[primaryImageIndex], location, uploader,
+      images: imagesArray, primaryImage: imagesArray[parseInt(primaryImageIndex)], location, uploader,
       tag: 'For sale', availability: true, status: 'pending',
       videoUrl: video, specification, condition,
     });
@@ -154,9 +152,6 @@ router.post('/donate', async (req, res) => {
     video,
   } = req.body;
 
-
-  console.log(req.body);
-
   // Validation for required fields
   if (!title || !description || !category || !location || !specification || !condition) {
     return res.status(400).json({ message: 'Please fill all required fields' });
@@ -173,7 +168,7 @@ router.post('/donate', async (req, res) => {
     return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
   }
 
-  if (!primaryImageIndex || primaryImageIndex < 0 || primaryImageIndex >= imagesArray.length) {
+  if (primaryImageIndex === null || primaryImageIndex === undefined) {
     return res.status(400).json({ message: 'Please select a primary image for display' });
   }
 

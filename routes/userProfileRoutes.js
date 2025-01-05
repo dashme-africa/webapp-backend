@@ -112,7 +112,7 @@ const fetchBanks = async () => {
       },
     });
     cachedBanks = response.data.data || []; // Cache the bank list
-    // console.log("Banks fetched successfully:", cachedBanks.length); // Debugging
+    // console.log("Banks fetched successfully:", response.data.data); // Debugging
   } catch (error) {
     console.error("Error fetching bank list:", error.message);
   }
