@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
-const multer = require('multer');
 const User = require('../models/User');
 const cloudinary = require('cloudinary').v2;
-const streamifier = require('streamifier');
 const Notification = require('../models/Notification');
 const AdminNotification = require('../models/AdminNotification');
 
@@ -17,12 +15,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Multer memory storage
-const upload = multer();
-
-// @desc Get all products or filter by category
-// @route GET /api/products
-// @access Public
+// Get all products or filter by category
 router.get('/', async (req, res) => {
   // console.log(req.query); // Optional: for debugging purposes
   try {
@@ -37,9 +30,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @desc Get a product by ID
-// @route GET /api/products/:id
-// @access Public
+// Get a product by ID
 router.get('/:id', async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).populate('uploader', 'username email _id profilePicture');
@@ -58,40 +49,52 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// @desc Create a new product for sale
-// @route POST /api/products
-// @access Public
-// Direct upload handler
-router.post('/', upload.fields([{ name: 'images', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
+// Create a new product for sale
+router.post('/', async (req, res) => {
   const {
-    title, description, category, price, priceCategory, location,
-    uploader, primaryImageIndex, specification, condition,
+    title,
+    description,
+    category,
+    price,
+    priceCategory,
+    location,
+    uploader,
+    primaryImageIndex,
+    specification,
+    condition,
+    images,
+    video,
   } = req.body;
 
+
+  console.log(req.body);
+
+  // Validation for required fields
   if (!title || !description || !category || !price || !priceCategory || !location || !specification || !condition) {
     return res.status(400).json({ message: 'Please fill all required fields' });
   }
 
-  const images = req.files?.images || [];
-  if (images.length === 0) return res.status(400).json({ message: 'Please upload at least one product image' });
-  if (images.length > 10) return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
+  const imagesArray = images.split(', ');
 
-  const oversizedFiles = images.filter((file) => file.size > 10 * 1024 * 1024);
-  if (oversizedFiles.length > 0) {
-    return res.status(400).json({ message: 'Image file size should not exceed 10MB' });
+  // Validate images
+  if (!images || imagesArray.length === 0) {
+    return res.status(400).json({ message: 'Please upload at least one product image' });
   }
 
-  if (!primaryImageIndex || primaryImageIndex < 0 || primaryImageIndex >= images.length) {
+  if (imagesArray.length > 10) {
+    return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
+  }
+
+  if (!primaryImageIndex || primaryImageIndex < 0 || primaryImageIndex >= imagesArray.length) {
     return res.status(400).json({ message: 'Please select a primary image for display' });
   }
 
-  if (['Accessories', 'Household-Items', 'Electronics'].includes(category) && (!req.files?.video || req.files.video.length === 0)) {
+  // Ensure video is uploaded for specific categories
+  if (
+    ['Accessories', 'Household-Items', 'Electronics'].includes(category) &&
+    (!video || video === '')
+  ) {
     return res.status(400).json({ message: 'Please upload a video for this category' });
-  }
-
-  const video = req.files?.video?.[0];
-  if (video && video.size > 10 * 1024 * 1024) {
-    return res.status(400).json({ message: 'Video file size should not exceed 10MB' });
   }
 
   try {
@@ -105,41 +108,17 @@ router.post('/', upload.fields([{ name: 'images', maxCount: 10 }, { name: 'video
 
     if (!user.isVerified) return res.status(403).json({ message: 'Verify your bank details first.' });
 
-    // Upload images directly to Cloudinary
-    const imageUploadPromises = images.map((file) => new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream({ resource_type: 'image' }, (err, result) => {
-        if (err) reject(err);
-        else resolve(result.secure_url);
-      });
-      streamifier.createReadStream(file.buffer).pipe(stream);
-    }));
-
-    const uploadedImages = await Promise.all(imageUploadPromises);
-    const primaryImage = uploadedImages[primaryImageIndex];
-
-    // Upload video directly to Cloudinary (if provided)
-    let videoUrl = '';
-    if (video) {
-      const videoStream = new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream({ resource_type: 'video' }, (err, result) => {
-          if (err) reject(err);
-          else resolve(result.secure_url);
-        });
-        streamifier.createReadStream(video.buffer).pipe(stream);
-      });
-      videoUrl = await videoStream;
-    }
-
-    // Create product document
+    // Save product to the database
     const product = new Product({
       title, description, category, price, priceCategory,
-      images: uploadedImages, primaryImage, location, uploader,
+      images: imagesArray, primaryImage: imagesArray[primaryImageIndex], location, uploader,
       tag: 'For sale', availability: true, status: 'pending',
-      videoUrl, specification, condition,
+      videoUrl: video, specification, condition,
     });
 
     const createdProduct = await product.save();
 
+    // Respond with the newly created product
     res.status(201).json(createdProduct);
 
     // Create notifications
@@ -160,40 +139,50 @@ router.post('/', upload.fields([{ name: 'images', maxCount: 10 }, { name: 'video
   }
 });
 
-
-// @desc Create a new product to donate
-// @route POST /api/products/donate
-// @access Public
-router.post('/donate', upload.fields([{ name: 'images', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
+// Create a new product to donate
+router.post('/donate', async (req, res) => {
   const {
-    title, description, category, location,
-    uploader, primaryImageIndex, specification, condition,
+    title,
+    description,
+    category,
+    location,
+    uploader,
+    primaryImageIndex,
+    specification,
+    condition,
+    images,
+    video,
   } = req.body;
 
+
+  console.log(req.body);
+
+  // Validation for required fields
   if (!title || !description || !category || !location || !specification || !condition) {
     return res.status(400).json({ message: 'Please fill all required fields' });
   }
 
-  const images = req.files?.images || [];
-  if (images.length === 0) return res.status(400).json({ message: 'Please upload at least one product image' });
-  if (images.length > 10) return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
+  const imagesArray = images.split(', ');
 
-  const oversizedFiles = images.filter((file) => file.size > 10 * 1024 * 1024);
-  if (oversizedFiles.length > 0) {
-    return res.status(400).json({ message: 'Image file size should not exceed 10MB' });
+  // Validate images
+  if (!images || imagesArray.length === 0) {
+    return res.status(400).json({ message: 'Please upload at least one product image' });
   }
 
-  if (!primaryImageIndex || primaryImageIndex < 0 || primaryImageIndex >= images.length) {
+  if (imagesArray.length > 10) {
+    return res.status(400).json({ message: 'You can upload a maximum of 10 images' });
+  }
+
+  if (!primaryImageIndex || primaryImageIndex < 0 || primaryImageIndex >= imagesArray.length) {
     return res.status(400).json({ message: 'Please select a primary image for display' });
   }
 
-  if (['Accessories', 'Household-Items', 'Electronics'].includes(category) && (!req.files?.video || req.files.video.length === 0)) {
+  // Ensure video is uploaded for specific categories
+  if (
+    ['Accessories', 'Household-Items', 'Electronics'].includes(category) &&
+    (!video || video === '')
+  ) {
     return res.status(400).json({ message: 'Please upload a video for this category' });
-  }
-
-  const video = req.files?.video?.[0];
-  if (video && video.size > 10 * 1024 * 1024) {
-    return res.status(400).json({ message: 'Video file size should not exceed 10MB' });
   }
 
   try {
@@ -207,41 +196,17 @@ router.post('/donate', upload.fields([{ name: 'images', maxCount: 10 }, { name: 
 
     if (!user.isVerified) return res.status(403).json({ message: 'Verify your bank details first.' });
 
-    // Upload images directly to Cloudinary
-    const imageUploadPromises = images.map((file) => new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream({ resource_type: 'image' }, (err, result) => {
-        if (err) reject(err);
-        else resolve(result.secure_url);
-      });
-      streamifier.createReadStream(file.buffer).pipe(stream);
-    }));
-
-    const uploadedImages = await Promise.all(imageUploadPromises);
-    const primaryImage = uploadedImages[primaryImageIndex];
-
-    // Upload video directly to Cloudinary (if provided)
-    let videoUrl = '';
-    if (video) {
-      const videoStream = new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream({ resource_type: 'video' }, (err, result) => {
-          if (err) reject(err);
-          else resolve(result.secure_url);
-        });
-        streamifier.createReadStream(video.buffer).pipe(stream);
-      });
-      videoUrl = await videoStream;
-    }
-
-    // Create product document
+    // Save product to the database
     const product = new Product({
       title, description, category,
-      images: uploadedImages, primaryImage, location, uploader,
+      images: imagesArray, primaryImage: imagesArray[primaryImageIndex], location, uploader,
       tag: 'Donate', availability: true, status: 'pending',
-      videoUrl, specification, condition,
+      videoUrl: video, specification, condition,
     });
 
     const createdProduct = await product.save();
 
+    // Respond with the newly created product
     res.status(201).json(createdProduct);
 
     // Create notifications
