@@ -118,8 +118,24 @@ const fetchBanks = async () => {
   }
 };
 
+
 // Load bank list on server start
 fetchBanks();
+
+router.get('/banks', async (req, res) => {
+  try {
+    // Ensure the bank list is available
+    if (!cachedBanks.length) {
+      console.error("Bank list not available, fetching...");
+      await fetchBanks(); // Refetch the bank list if empty
+    }
+    res.json(cachedBanks);
+  } catch (error) {
+    console.error("Error fetching bank list:", error.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 
 // Endpoint to resolve account details
 router.get('/resolve-account', async (req, res) => {
