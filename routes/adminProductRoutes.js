@@ -18,18 +18,17 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// @desc Get all products
-// @route GET /api/admin/products
-// @access Private (Admin)
+// Get all products
 router.get('/', protectAdmin, async (req, res) => {
   try {
-    const products = await Product.find({});
+    const products = await Product.find({}).populate('uploader', 'username email phoneNumber');
     res.status(200).json(products);
   } catch (error) {
     console.error('Error fetching products:', error.message);
     res.status(500).json({ message: 'Failed to fetch products', error: error.message });
   }
 });
+
 
 // Get a product by ID
 router.get('/:id', protectAdmin, async (req, res) => {
@@ -45,9 +44,7 @@ router.get('/:id', protectAdmin, async (req, res) => {
   }
 });
 
-// @desc Delete a product
-// @route DELETE /api/admin/products/:id
-// @access Private (Admin)
+// Delete a product
 router.delete('/:id', protectAdmin, async (req, res) => {
   try {
     // console.log('Product ID:', req.params.id);  
@@ -64,9 +61,7 @@ router.delete('/:id', protectAdmin, async (req, res) => {
   }
 });
 
-// @desc Update a product
-// @route PUT /api/admin/products/:id
-// @access Private (Admin)
+// Update a product
 router.put('/:id', upload.single('image'), async (req, res) => {
   // console.log('Form data received:', req.body);
   // console.log('Uploaded file:', req.file);
