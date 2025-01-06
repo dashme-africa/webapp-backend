@@ -26,7 +26,13 @@ const userSchema = mongoose.Schema(
     profilePicture: {
       type: String,
     },
-    address: {
+    city: {
+      type: String,
+    },
+    state: {
+      type: String,
+    },
+    country: {
       type: String,
     },
     phoneNumber: {

@@ -124,6 +124,28 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
+// Define validation rules for toAddress fields
+const validateToAddress = (toAddress) => {
+  const errors = {};
+
+  if (!toAddress.name || toAddress.name.trim() === "") {
+    errors.name = "Name is required";
+  }
+
+  if (!toAddress.email || !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(toAddress.email)) {
+    errors.email = "Invalid email address";
+  }
+
+  if (!toAddress.phone || !/^\d{11}$/.test(toAddress.phone)) {
+    errors.phone = "Invalid phone number. Please enter 11 digits.";
+  }
+
+  if (!toAddress.address || toAddress.address.trim() === "") {
+    errors.address = "Address is required";
+  }
+
+  return errors;
+};
 
 // Get single rate for a specific courier
 app.post("/api/rates", async (req, res) => {
@@ -132,6 +154,13 @@ app.post("/api/rates", async (req, res) => {
   if (!carrierName || !type || !toAddress || !fromAddress || !parcels || !items) {
     return res.status(400).json({ error: "Missing required fields." });
   }
+
+
+  // Validate toAddress fields
+  // const toAddressErrors = validateToAddress(toAddress);
+  // if (Object.keys(toAddressErrors).length > 0) {
+  //   return res.status(400).json({ error: "Invalid toAddress fields", details: toAddressErrors });
+  // }
 
   try {
     const response = await axios.post(
