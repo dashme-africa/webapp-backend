@@ -323,3 +323,91 @@ module.exports = router;
 // });
 
 
+
+
+
+
+
+
+
+// Get single rate for a specific courier
+app.post("/api/rates", async (req, res) => {
+  const { carrierName, type, toAddress, fromAddress, parcels, items } = req.body;
+    if (!carrierName || !type || !toAddress || !fromAddress || !parcels || !items) {
+    return res.status(400).json({ error: "Missing required fields." });
+  }
+
+  try {
+    const response = await axios.post(
+      `${process.env.GOSHIIP_BASE_URL}/tariffs/getpricesingle/${carrierName}`,
+      {
+        type,
+        toAddress,
+        fromAddress,
+        parcels: CONSTANT_PARCELS,
+        items,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.status(200).json(response.data);
+    console.log(response.data);
+  } 
+catch (error) {
+  console.error("Error fetching couriers:", error);
+
+  if (error.response?.status === 400) {
+    // Handle validation errors
+    console.error("Validation error:", error.response?.data);
+    res.status(400).json({
+      error: "Validation error",
+      details: error.response?.data,
+    });
+  } else if (error.response?.status === 401) {
+    // Handle authentication errors
+    console.error("Authentication error:", error.response?.data);
+    res.status(401).json({
+      error: "Authentication error",
+      details: error.response?.data,
+    });
+  } else if (error.response?.status === 429) {
+    // Handle rate limit errors
+    console.error("Rate limit exceeded:", error.response?.data);
+    res.status(429).json({
+      error: "Rate limit exceeded",
+      details: error.response?.data,
+    });
+  } else if (error.response?.data?.rates?.status === false) {
+    // Handle Goshiip API error cases
+    const errorMessage = error.response?.data?.rates?.message;
+    if (errorMessage.includes("Undefined array key \"distance\"")) {
+      res.status(400).json({
+        error: "Invalid address",
+        details: "Please enter a valid address.",
+      });
+    } else if (errorMessage.includes("Truq cannot service this shipment because of the weight.")) {
+      res.status(400).json({
+        error: "Invalid shipment weight",
+        details: "Truq cannot service this shipment because of the weight.",
+      });
+    } else {
+      res.status(400).json({
+        error: "Goshiip API error",
+        details: errorMessage,
+      });
+    }
+  } else {
+    // Handle generic errors
+    console.error("Error fetching couriers:", error);
+    res.status(error.response?.status || 500).json({
+      error: "Failed to fetch couriers.",
+      details: error.response?.data || error.message,
+    });
+  }
+}
+});

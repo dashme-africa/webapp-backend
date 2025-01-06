@@ -124,28 +124,47 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// Define validation rules for toAddress fields
-const validateToAddress = (toAddress) => {
-  const errors = {};
 
-  if (!toAddress.name || toAddress.name.trim() === "") {
-    errors.name = "Name is required";
-  }
+// app.post("/api/rates", async (req, res) => {
+//   const { carrierName, type, toAddress, fromAddress, parcels, items } = req.body;
 
-  if (!toAddress.email || !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(toAddress.email)) {
-    errors.email = "Invalid email address";
-  }
 
-  if (!toAddress.phone || !/^\d{11}$/.test(toAddress.phone)) {
-    errors.phone = "Invalid phone number. Please enter 11 digits.";
-  }
+//   if (!carrierName || !type || !toAddress || !fromAddress || !parcels || !items) {
+//     return res.status(400).json({ error: "Missing required fields." });
+//   }
 
-  if (!toAddress.address || toAddress.address.trim() === "") {
-    errors.address = "Address is required";
-  }
 
-  return errors;
-};
+  
+
+//   try {
+//     const response = await axios.post(
+//       `${process.env.GOSHIIP_BASE_URL}/tariffs/getpricesingle/${carrierName}`,
+//       {
+//         type,
+//         toAddress,
+//         fromAddress,
+//         parcels: CONSTANT_PARCELS, // Use the constant parcels data
+//         items,
+//       },
+//       {
+//         headers: {
+//           Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     );
+
+//     res.status(200).json(response.data);
+//   } catch (error) {
+//     console.error("Error fetching couriers:", error.response?.data || error.message);
+//     res.status(error.response?.status || 500).json({
+//       error: "Failed to fetch couriers.",
+//       details: error.response?.data || error.message,
+//     });
+//   }
+// });
+
+
 
 // Get single rate for a specific courier
 app.post("/api/rates", async (req, res) => {
@@ -154,6 +173,22 @@ app.post("/api/rates", async (req, res) => {
     return res.status(400).json({ error: "Missing required fields." });
   }
 
+  if (!toAddress.name || toAddress.name.trim() === "") {
+    return res.status(400).json({ error: "Name is required." });
+  }
+
+  if (!toAddress.phone || !/^0\d{10}$/.test(toAddress.phone)) {
+    return res.status(400).json({ error: "Invalid phone number. Please enter 11 digits starting with 0."});
+  }
+
+  if (!toAddress.email || !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(toAddress.email)) {
+    return res.status(400).json({ error: "Invalid email address" });
+  }
+
+  if (!toAddress.address || toAddress.address.trim() === "") {
+    return res.status(400).json({ error: "Address is required" });
+  }
+  
   try {
     const response = await axios.post(
       `${process.env.GOSHIIP_BASE_URL}/tariffs/getpricesingle/${carrierName}`,
@@ -227,99 +262,6 @@ catch (error) {
     });
   }
 }
-});
-
-// app.post("/api/rates", async (req, res) => {
-//   const { carrierName, type, toAddress, fromAddress, parcels, items } = req.body;
-//     if (!carrierName || !type || !toAddress || !fromAddress || !parcels || !items) {
-//     return res.status(400).json({ error: "Missing required fields." });
-//   }
-// console.log(req.body);
-
-//   try {
-//     const response = await axios.post(
-//       `${process.env.GOSHIIP_BASE_URL}/tariffs/getpricesingle/${carrierName}`,
-//       {
-//         type,
-//         toAddress,
-//         fromAddress,
-//         parcels: CONSTANT_PARCELS,
-//         items,
-//       },
-//       {
-//         headers: {
-//           Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
-//           "Content-Type": "application/json",
-//         },
-//       }
-//     );
-
-//     res.status(200).json(response.data);
-//   } catch (error) {
-//     console.error("Error fetching couriers:", error);
-
-//     if (error.response?.status === 400) {
-//       // Handle validation errors
-//       console.error("Validation error:", error.response?.data);
-//       res.status(400).json({
-//         error: "Validation error",
-//         details: error.response?.data,
-//       });
-//     } else if (error.response?.status === 401) {
-//       // Handle authentication errors
-//       console.error("Authentication error:", error.response?.data);
-//       res.status(401).json({
-//         error: "Authentication error",
-//         details: error.response?.data,
-//       });
-//     } else if (error.response?.status === 429) {
-//       // Handle rate limit errors
-//       console.error("Rate limit exceeded:", error.response?.data);
-//       res.status(429).json({
-//         error: "Rate limit exceeded",
-//         details: error.response?.data,
-//       });
-//     } else {
-//       // Handle generic errors
-//       console.error("Error fetching couriers:", error);
-//       res.status(error.response?.status || 500).json({
-//         error: "Failed to fetch couriers.",
-//         details: error.response?.data || error.message,
-//       });
-//     }
-//   }
-// });
-
-
-
-app.get('/api/track-shipment/:reference', async (req, res) => {
-  const { reference } = req.params;
-
-  try {
-    const response = await axios.get(`${process.env.GOSHIIP_BASE_URL}/shipment/track/${reference}`, {
-      headers: {
-        'Authorization': `Bearer ${process.env.GOSHIIP_API_KEY}`,
-      }
-    });
-
-    if (response.data.status) {
-      res.json({
-        status: true,
-        data: response.data.data
-      });
-    } else {
-      res.json({
-        status: false,
-        message: 'Could not fetch tracking data'
-      });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      status: false,
-      message: 'Internal server error'
-    });
-  }
 });
 
 // Verification payment route
@@ -564,6 +506,37 @@ app.get('/api/track-shipment/:reference', async (req, res) => {
       status: false,
       message: 'Internal server error.',
       error: error.response?.data || error.message,
+    });
+  }
+});
+
+// Track Shipment Endpoint
+app.get('/api/track-shipment/:reference', async (req, res) => {
+  const { reference } = req.params;
+
+  try {
+    const response = await axios.get(`${process.env.GOSHIIP_BASE_URL}/shipment/track/${reference}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.GOSHIIP_API_KEY}`,
+      }
+    });
+
+    if (response.data.status) {
+      res.json({
+        status: true,
+        data: response.data.data
+      });
+    } else {
+      res.json({
+        status: false,
+        message: 'Could not fetch tracking data'
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: false,
+      message: 'Internal server error'
     });
   }
 });
