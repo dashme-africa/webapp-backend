@@ -100,7 +100,7 @@ router.post('/', async (req, res) => {
     if (!user) return res.status(404).json({ message: 'Uploader not found' });
 
     // Validate user profile
-    if (!user.fullName || !user.username || !user.email || !user.address || !user.bio || !user.phoneNumber) {
+    if (!user.fullName || !user.username || !user.email || !user.city || !user.state || !user.country || !user.bio || !user.phoneNumber) {
       return res.status(403).json({ message: 'Please complete your profile info before uploading a product.' });
     }
 
@@ -185,7 +185,7 @@ router.post('/donate', async (req, res) => {
     if (!user) return res.status(404).json({ message: 'Uploader not found' });
 
     // Validate user profile
-    if (!user.fullName || !user.username || !user.email || !user.address || !user.bio || !user.phoneNumber) {
+    if (!user.fullName || !user.username || !user.email || !user.city || !user.state || !user.country || !user.bio || !user.phoneNumber) {
       return res.status(403).json({ message: 'Please complete your profile info before uploading a product.' });
     }
 

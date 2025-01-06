@@ -98,5 +98,15 @@ router.patch('/notifications/:id/mark-read', protectAdmin, async (req, res) => {
     }
 });
 
+// router.delete('/notifications/delete-all', async (req, res) => {
+//     try {
+//       await AdminNotification.deleteMany({});
+//       res.status(200).json({ message: 'All notifications deleted successfully' });
+//     } catch (error) {
+//       console.error('Error deleting notifications:', error);
+//       res.status(500).json({ message: 'Internal server error', error: error.message });
+//     }
+//   });
+  
 
 module.exports = router;

@@ -6,6 +6,9 @@ const { protect } = require('../middleware/authMiddleware');
 // Fetch all notifications for the user
 router.get('/notifications', protect, async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
     const userId = req.user.id; // Extract the user ID from the request object
     const notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
 
