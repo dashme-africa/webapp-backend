@@ -281,14 +281,15 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
         // Check if booking was successful
         if (bookingResponse.data.status) {
           const shipmentId = bookingResponse.data.data.shipmentId; // Get the shipment ID
-          console.log(`Booking successful. Shipment ID: ${shipmentId}`);
+          const shipmentReference = bookingResponse.data.data.reference;
+          console.log(`Booking successful. Shipment ID: ${shipmentReference}`);
 
           try {
             // Update the Order with the shipmentId
-            await Order.findOneAndUpdate({ _id: order_id }, { $set: { shipmentId } }, { new: true });
-            console.log('Order updated with shipmentId');
+            await Order.findOneAndUpdate({ _id: order_id }, { $set: { shipmentReference } }, { new: true });
+            console.log('Order updated with shipmentReference');
           } catch (error) {
-            console.error('Error updating order with shipmentId:', error);
+            console.error('Error updating order with shipmentReference:', error);
           }
 
           try {
@@ -423,6 +424,7 @@ app.get('/api/transactions', protect, async (req, res) => {
 app.get('/api/track-shipment/:reference', async (req, res) => {
   const { reference } = req.params;
 
+  console.log(reference)
   if (!reference) {
     return res.status(400).json({
       status: false,
