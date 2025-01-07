@@ -16,6 +16,7 @@ const myProductRoutes = require('./routes/myProductRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const adminNotificationRoutes = require('./routes/adminNotificationRoutes');
 const Transaction = require('./models/Transaction');
+const Order = require('./models/Order');
 const { protect } = require('./middleware/authMiddleware');
 
 
@@ -107,69 +108,10 @@ const CONSTANT_PARCELS = {
   height: 5,
 };
 
-app.post('/api/orders', async (req, res) => {
-  const { userId, items, amount, paymentReference } = req.body;
-
-  try {
-    const newOrder = new Order({
-      userId,
-      items,
-      amount,
-      paymentReference,
-    });
-    const savedOrder = await newOrder.save();
-    res.status(201).json({ message: 'Order created successfully', order: savedOrder });
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating order', error: error.message });
-  }
-});
-
-
-// app.post("/api/rates", async (req, res) => {
-//   const { carrierName, type, toAddress, fromAddress, parcels, items } = req.body;
-
-
-//   if (!carrierName || !type || !toAddress || !fromAddress || !parcels || !items) {
-//     return res.status(400).json({ error: "Missing required fields." });
-//   }
-
-
-  
-
-//   try {
-//     const response = await axios.post(
-//       `${process.env.GOSHIIP_BASE_URL}/tariffs/getpricesingle/${carrierName}`,
-//       {
-//         type,
-//         toAddress,
-//         fromAddress,
-//         parcels: CONSTANT_PARCELS, // Use the constant parcels data
-//         items,
-//       },
-//       {
-//         headers: {
-//           Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
-//           "Content-Type": "application/json",
-//         },
-//       }
-//     );
-
-//     res.status(200).json(response.data);
-//   } catch (error) {
-//     console.error("Error fetching couriers:", error.response?.data || error.message);
-//     res.status(error.response?.status || 500).json({
-//       error: "Failed to fetch couriers.",
-//       details: error.response?.data || error.message,
-//     });
-//   }
-// });
-
-
-
 // Get single rate for a specific courier
 app.post("/api/rates", async (req, res) => {
   const { carrierName, type, toAddress, fromAddress, parcels, items } = req.body;
-    if (!carrierName || !type || !toAddress || !fromAddress || !parcels || !items) {
+  if (!carrierName || !type || !toAddress || !fromAddress || !parcels || !items) {
     return res.status(400).json({ error: "Missing required fields." });
   }
 
@@ -178,7 +120,7 @@ app.post("/api/rates", async (req, res) => {
   }
 
   if (!toAddress.phone || !/^0\d{10}$/.test(toAddress.phone)) {
-    return res.status(400).json({ error: "Invalid phone number. Please enter 11 digits starting with 0."});
+    return res.status(400).json({ error: "Invalid phone number. Please enter 11 digits starting with 0." });
   }
 
   if (!toAddress.email || !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(toAddress.email)) {
@@ -188,7 +130,7 @@ app.post("/api/rates", async (req, res) => {
   if (!toAddress.address || toAddress.address.trim() === "") {
     return res.status(400).json({ error: "Address is required" });
   }
-  
+
   try {
     const response = await axios.post(
       `${process.env.GOSHIIP_BASE_URL}/tariffs/getpricesingle/${carrierName}`,
@@ -209,59 +151,59 @@ app.post("/api/rates", async (req, res) => {
 
     res.status(200).json(response.data);
     console.log(response.data);
-  } 
-catch (error) {
-  console.error("Error fetching couriers:", error);
+  }
+  catch (error) {
+    console.error("Error fetching couriers:", error);
 
-  if (error.response?.status === 400) {
-    // Handle validation errors
-    console.error("Validation error:", error.response?.data);
-    res.status(400).json({
-      error: "Validation error",
-      details: error.response?.data,
-    });
-  } else if (error.response?.status === 401) {
-    // Handle authentication errors
-    console.error("Authentication error:", error.response?.data);
-    res.status(401).json({
-      error: "Authentication error",
-      details: error.response?.data,
-    });
-  } else if (error.response?.status === 429) {
-    // Handle rate limit errors
-    console.error("Rate limit exceeded:", error.response?.data);
-    res.status(429).json({
-      error: "Rate limit exceeded",
-      details: error.response?.data,
-    });
-  } else if (error.response?.data?.rates?.status === false) {
-    // Handle Goshiip API error cases
-    const errorMessage = error.response?.data?.rates?.message;
-    if (errorMessage.includes("Undefined array key \"distance\"")) {
+    if (error.response?.status === 400) {
+      // Handle validation errors
+      console.error("Validation error:", error.response?.data);
       res.status(400).json({
-        error: "Invalid address",
-        details: "Please enter a valid address.",
+        error: "Validation error",
+        details: error.response?.data,
       });
-    } else if (errorMessage.includes("Truq cannot service this shipment because of the weight.")) {
-      res.status(400).json({
-        error: "Invalid shipment weight",
-        details: "Truq cannot service this shipment because of the weight.",
+    } else if (error.response?.status === 401) {
+      // Handle authentication errors
+      console.error("Authentication error:", error.response?.data);
+      res.status(401).json({
+        error: "Authentication error",
+        details: error.response?.data,
       });
+    } else if (error.response?.status === 429) {
+      // Handle rate limit errors
+      console.error("Rate limit exceeded:", error.response?.data);
+      res.status(429).json({
+        error: "Rate limit exceeded",
+        details: error.response?.data,
+      });
+    } else if (error.response?.data?.rates?.status === false) {
+      // Handle Goshiip API error cases
+      const errorMessage = error.response?.data?.rates?.message;
+      if (errorMessage.includes("Undefined array key \"distance\"")) {
+        res.status(400).json({
+          error: "Invalid address",
+          details: "Please enter a valid address.",
+        });
+      } else if (errorMessage.includes("Truq cannot service this shipment because of the weight.")) {
+        res.status(400).json({
+          error: "Invalid shipment weight",
+          details: "Truq cannot service this shipment because of the weight.",
+        });
+      } else {
+        res.status(400).json({
+          error: "Goshiip API error",
+          details: errorMessage,
+        });
+      }
     } else {
-      res.status(400).json({
-        error: "Goshiip API error",
-        details: errorMessage,
+      // Handle generic errors
+      console.error("Error fetching couriers:", error);
+      res.status(error.response?.status || 500).json({
+        error: "Failed to fetch couriers.",
+        details: error.response?.data || error.message,
       });
     }
-  } else {
-    // Handle generic errors
-    console.error("Error fetching couriers:", error);
-    res.status(error.response?.status || 500).json({
-      error: "Failed to fetch couriers.",
-      details: error.response?.data || error.message,
-    });
   }
-}
 });
 
 // Verification payment route
@@ -285,7 +227,28 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
       const transactionData = response.data.data;
       console.log('Transaction data:', transactionData);
 
-      const { redis_key, rate_id } = transactionData.metadata;
+      const { redis_key, rate_id, order_id } = transactionData.metadata;
+      // Create and save the transaction
+      const newTransaction = new Transaction({
+        transactionId: transactionData.id,
+        reference: transactionData.reference,
+        amount: transactionData.amount,
+        orderId: order_id,
+        currency: transactionData.currency,
+        status: transactionData.status,
+        customerEmail: transactionData.customer.email,
+        paymentMethod: transactionData.channel,
+        paidAt: transactionData.paid_at,
+        gatewayResponse: transactionData.gateway_response,
+      });
+      try {
+        await newTransaction.save();
+        // Update the Order with the transactionId
+        await Order.findOneAndUpdate({ _id: order_id }, { $set: { transactionReference: transactionData.reference } }, { new: true });
+        console.log('Order updated with transactionId');
+      } catch (error) {
+        console.error('Error saving transaction and updating order with transactionId:', error);
+      }
 
       // Prepare the booking payload
       const bookingPayload = {
@@ -319,6 +282,14 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
         if (bookingResponse.data.status) {
           const shipmentId = bookingResponse.data.data.shipmentId; // Get the shipment ID
           console.log(`Booking successful. Shipment ID: ${shipmentId}`);
+
+          try {
+            // Update the Order with the shipmentId
+            await Order.findOneAndUpdate({ _id: order_id }, { $set: { shipmentId } }, { new: true });
+            console.log('Order updated with shipmentId');
+          } catch (error) {
+            console.error('Error updating order with shipmentId:', error);
+          }
 
           try {
             // Trigger the Assign API with shipment_id in the body
@@ -394,57 +365,40 @@ app.get('/api/verify-transaction/:reference', async (req, res) => {
 });
 
 // Get Transaction by reference
+// Get Transaction by reference
 app.get('/api/transaction/verify/:reference', async (req, res) => {
   const { reference } = req.params;
 
+  // Validate the reference parameter
+  if (!reference || reference.trim() === '') {
+    return res.status(400).json({ error: 'Reference is required' });
+  }
+
   try {
-    const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      },
-    });
+    // Retrieve the transaction
+    const transaction = await Transaction.findOne({ reference });
 
-    if (response.data.status) {
-      const transactionData = response.data.data;
+    if (transaction) {
+      // Format the transaction data
+      const formattedTransaction = {
+        id: transaction._id,
+        reference: transaction.reference,
+        amount: transaction.amount,
+        status: transaction.status,
+        createdAt: transaction.createdAt,
+      };
 
-      // Check if the transaction exists
-      const existingTransaction = await Transaction.findOne({ reference });
-      if (existingTransaction) {
-        console.log('Transaction already exists:', existingTransaction);
-        return res.status(200).json({ message: 'Transaction already exists', data: existingTransaction });
-      }
-
-      // Create and save the transaction
-      const newTransaction = new Transaction({
-        transactionId: transactionData.id,
-        reference: transactionData.reference,
-        amount: transactionData.amount,
-        currency: transactionData.currency,
-        status: transactionData.status,
-        customerEmail: transactionData.customer.email,
-        paymentMethod: transactionData.channel,
-        paidAt: transactionData.paid_at,
-        gatewayResponse: transactionData.gateway_response,
-      });
-
-      try {
-
-        await newTransaction.save();
-        // console.log('Transaction saved successfully:', newTransaction);
-
-        res.status(200).json({ message: 'Transaction verified and saved', data: newTransaction });
-      } catch (saveError) {
-        console.error('Error saving transaction:', saveError.message);
-        res.status(500).json({ message: 'Database save error', error: saveError.message });
-      }
+      res.status(200).json({ data: formattedTransaction });
     } else {
-      res.status(400).json({ message: 'Transaction verification failed', data: response.data });
+      res.status(404).json({ message: 'Transaction not found' });
     }
+
   } catch (error) {
     console.error('Error verifying transaction:', error.message);
-    res.status(500).json({ message: 'Error verifying transaction', error: error.message });
+    res.status(500).json({ error: 'Error verifying transaction' });
   }
 });
+
 
 // Get all Transactions
 app.get('/api/transactions', protect, async (req, res) => {
@@ -510,43 +464,11 @@ app.get('/api/track-shipment/:reference', async (req, res) => {
   }
 });
 
-// Track Shipment Endpoint
-app.get('/api/track-shipment/:reference', async (req, res) => {
-  const { reference } = req.params;
-
-  try {
-    const response = await axios.get(`${process.env.GOSHIIP_BASE_URL}/shipment/track/${reference}`, {
-      headers: {
-        'Authorization': `Bearer ${process.env.GOSHIIP_API_KEY}`,
-      }
-    });
-
-    if (response.data.status) {
-      res.json({
-        status: true,
-        data: response.data.data
-      });
-    } else {
-      res.json({
-        status: false,
-        message: 'Could not fetch tracking data'
-      });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      status: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
 // Get all shipments
 app.get("/api/shipments", async (req, res) => {
   const { status } = req.query; // Optional status filter (e.g., "pending", "in progress", etc.)
-  const apiUrl = `https://delivery-staging.apiideraos.com/api/v2/token/user/allorders${
-    status ? `?status=${status}` : ""
-  }`;
+  const apiUrl = `https://delivery-staging.apiideraos.com/api/v2/token/user/allorders${status ? `?status=${status}` : ""
+    }`;
 
   const headers = {
     Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`, // Replace "Secret Key" with your actual API key
@@ -609,10 +531,58 @@ app.get("/api/shipments/cancel/:reference", async (req, res) => {
 });
 
 
+app.get('/api/orders/user/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const orders = await Order.find({ userId })
+      .populate({ path: 'productId', model: 'Product' })
+      .populate({ path: 'sellerId', model: 'User', select: 'username email phoneNumber' })
+      .sort({ createdAt: -1 });
+    res.json({ orders });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error retrieving orders' });
+  }
+});
+
+
+
 // Start Server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 module.exports = app;
+
+
+// Track Shipment Endpoint
+// app.get('/api/track-shipment/:reference', async (req, res) => {
+//   const { reference } = req.params;
+
+//   try {
+//     const response = await axios.get(`${process.env.GOSHIIP_BASE_URL}/shipment/track/${reference}`, {
+//       headers: {
+//         'Authorization': `Bearer ${process.env.GOSHIIP_API_KEY}`,
+//       }
+//     });
+
+//     if (response.data.status) {
+//       res.json({
+//         status: true,
+//         data: response.data.data
+//       });
+//     } else {
+//       res.json({
+//         status: false,
+//         message: 'Could not fetch tracking data'
+//       });
+//     }
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({
+//       status: false,
+//       message: 'Internal server error'
+//     });
+//   }
+// });
 
 
 

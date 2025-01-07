@@ -1,5 +1,6 @@
 const express = require("express");
 const User = require('../models/User');
+const Order = require('../models/Order');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const router = express.Router();
@@ -135,13 +136,36 @@ router.post('/subaccount', async (req, res) => {
 
 // Route to initialize transaction
 router.post('/initialize-transaction', async (req, res) => {
-    const { email, amount, subaccount, transaction_charge, redis_key, rate_id, rate_amount } = req.body;
+    const { email, amount, subaccount, transaction_charge, redis_key, rate_id, rate_amount, product_id,
+        quantity,
+        product_amount,
+        seller_id, user_id,
+     } = req.body;
 
     try {
         // Ensure all required fields are provided
         if (!email || !amount || !subaccount || !redis_key || !rate_id) {
             return res.status(400).json({ message: "Required fields are missing" });
         }
+
+        // Create a new order
+        const order = new Order({
+            buyerEmail: email,
+            amount,
+            subaccount,
+            transactionCharge: transaction_charge,
+            redisKey: redis_key,
+            rateId: rate_id,
+            rateAmount: rate_amount,
+            productId: product_id,
+            quantity,
+            productAmount: product_amount,
+            sellerId: seller_id,
+            userId: user_id,
+        });
+
+        // Save the order to the database
+        await order.save();
 
         // Transaction split logic
         const response = await axios.post(
@@ -157,6 +181,7 @@ router.post('/initialize-transaction', async (req, res) => {
                     redis_key,  // Store redis_key in metadata
                     rate_id,      // Store rate_id in metadata
                     rate_amount,
+                    order_id: order._id, // Store order ID in metadata
                 }
             },
             {
@@ -177,7 +202,5 @@ router.post('/initialize-transaction', async (req, res) => {
         });
     }
 });
-
-
 
 module.exports = router;

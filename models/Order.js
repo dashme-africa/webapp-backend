@@ -1,13 +1,20 @@
 const mongoose = require('mongoose');
 
-const OrderSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  items: [{ productId: String, quantity: Number }], // List of products in the order
-  amount: Number, // Total price
-  paymentReference: String, // Paystack or payment gateway reference
-  status: { type: String, default: 'Pending' }, // Order status: Pending, Paid, Shipped, Delivered
-  shipmentId: String, // Associated shipment ID from the logistics API
-  createdAt: { type: Date, default: Date.now },
-});
+const orderSchema = new mongoose.Schema({
+  buyerEmail: String,
+  amount: Number,
+  userId: String,
+  subaccount: String,
+  transactionCharge: Number,
+  redisKey: String,
+  rateId: String,
+  rateAmount: Number,
+  productId: String,
+  quantity: Number,
+  productAmount: Number,
+  sellerId: String,
+  transactionReference: String,
+  shipmentReference: String,
+}, { timestamps: true });
 
-module.exports = mongoose.model('Order', OrderSchema);
+module.exports = mongoose.model('Order', orderSchema);
