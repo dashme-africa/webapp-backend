@@ -382,11 +382,14 @@ app.get('/api/transaction/verify/:reference', async (req, res) => {
     if (transaction) {
       // Format the transaction data
       const formattedTransaction = {
-        id: transaction._id,
+        transactionId: transaction.transactionId,
         reference: transaction.reference,
         amount: transaction.amount,
+        currency: transaction.currency,
         status: transaction.status,
-        createdAt: transaction.createdAt,
+        customerEmail: transaction.customerEmail,
+        paymentMethod: transaction.paymentMethod,
+        paidAt: transaction.paidAt,
       };
 
       res.status(200).json({ data: formattedTransaction });
