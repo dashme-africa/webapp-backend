@@ -4,6 +4,7 @@ const transactionSchema = new mongoose.Schema({
   transactionId: { type: String, required: true },
   reference: { type: String, required: true },
   amount: { type: Number, required: true },
+  orderId: { type: String },
   currency: { type: String, required: true },
   status: { type: String, required: true },
   customerEmail: { type: String, required: true },
