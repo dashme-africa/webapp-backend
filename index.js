@@ -162,7 +162,7 @@ app.post("/api/rates", async (req, res) => {
       console.error("Validation error:", error.response?.data);
       res.status(400).json({
         error: "Validation error",
-        details: error.response?.data,
+        details: error.response?.data?.message,
       });
     } else if (error.response?.status === 401) {
       // Handle authentication errors
