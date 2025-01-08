@@ -5,7 +5,6 @@ async function fetchPlatformUserId() {
         Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
       },
     });
-
     const userId = response.data.data.id;
     console.log('Platform User ID:', userId);
 
