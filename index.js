@@ -111,6 +111,8 @@ const CONSTANT_PARCELS = {
 // Get single rate for a specific courier
 app.post("/api/rates", async (req, res) => {
   const { carrierName, type, toAddress, fromAddress, parcels, items } = req.body;
+
+  console.log(req.body)
   if (!carrierName || !type || !toAddress || !fromAddress || !parcels || !items) {
     return res.status(400).json({ error: "Missing required fields." });
   }
