@@ -162,7 +162,7 @@ app.post("/api/rates", async (req, res) => {
       console.error("Validation error:", error.response?.data);
       res.status(400).json({
         error: "Validation error",
-        details: error.response?.data?.message,
+        details: error.response?.data,
       });
     } else if (error.response?.status === 401) {
       // Handle authentication errors
@@ -171,13 +171,6 @@ app.post("/api/rates", async (req, res) => {
         error: "Authentication error",
         details: error.response?.data,
       });
-    }
-      else if (error.response?.data?.status === false && error.response?.data?.status_code === 400) {
-        const errorMessage = error.response?.data?.message;
-        res.status(400).json({
-          error: "Goshiip API error",
-          details: errorMessage,
-        });
     } else if (error.response?.status === 429) {
       // Handle rate limit errors
       console.error("Rate limit exceeded:", error.response?.data);
