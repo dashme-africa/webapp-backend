@@ -51,10 +51,20 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // MongoDB Connection
-mongoose
-  .connect(process.env.MONGO_URI)
+function logError(err) {
+  if (err.message) {
+    console.error('Database connection error:', err.message);
+  } else if (err.errors) {
+    console.error('Database connection error:', Object.values(err.errors).map((err) => err.message).join(', '));
+  } else {
+    console.error('Database connection error:', err);
+  }
+}
+
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('Database connection error:', err));
+  .catch((err) => logError(err));
+
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
