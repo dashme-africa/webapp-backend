@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model AdminNotification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  v         Int      @map("__v")
+  createdAt DateTime @db.Date
+  message   String
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id])
+  read      Boolean
+  type      String
+
+  @@map("adminnotifications")
+}
+
+model Admin {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  v        Int    @map("__v")
+  email    String @unique(map: "email_1")
+  password String
+
+  @@map("admins")
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  v         Int      @map("__v")
+  createdAt DateTime @db.Date
+  message   String
+  read      Boolean
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model Order {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  v                    Int      @map("__v")
+  amount               Int
+  buyerEmail           String
+  createdAt            DateTime @db.Date
+  productAmount        Int
+  productId            String   @db.ObjectId
+  product              Product  @relation(fields: [productId], references: [id])
+  quantity             Int
+  rateAmount           Int
+  rateId               String
+  redisKey             String
+  sellerId             String
+  shipmentReference    String?
+  subaccount           String
+  transactionCharge    Int
+  transactionReference String //@unique
+  // transaction          Transaction?
+  updatedAt            DateTime @db.Date
+  userId               String   @db.ObjectId
+  user                 User     @relation(fields: [userId], references: [id])
+
+  @@map("orders")
+}
+
+model Product {
+  id                String              @id @default(auto()) @map("_id") @db.ObjectId
+  v                 Int                 @map("__v")
+  availability      Boolean
+  category          String
+  condition         String
+  createdAt         DateTime            @db.Date
+  description       String
+  images            String[]
+  location          String
+  price             Int
+  priceCategory     String
+  primaryImage      String
+  specification     String
+  status            String
+  tag               String
+  title             String
+  updatedAt         DateTime            @db.Date
+  uploader          String              @db.ObjectId
+  videoUrl          String
+  adminNotification AdminNotification[]
+  order             Order[]
+
+  @@map("products")
+}
+
+model Transaction {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  v               Int      @map("__v")
+  amount          Int
+  createdAt       DateTime @db.Date
+  currency        String
+  customerEmail   String
+  gatewayResponse String
+  // order           Order?   @relation(fields: [reference], references: [transactionReference])
+  paidAt          DateTime @db.Date
+  paymentMethod   String
+  reference       String //@unique
+  status          String
+  transactionId   String
+  updatedAt       DateTime @db.Date
+
+  @@map("transactions")
+}
+
+model User {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  v              Int            @map("__v")
+  accountName    String?
+  accountNumber  String?
+  bankName       String?
+  bio            String?
+  city           String?
+  country        String?
+  createdAt      DateTime       @db.Date
+  email          String         @unique(map: "email_1")
+  fullName       String
+  isVerified     Boolean
+  password       String
+  phoneNumber    String?
+  profilePicture String?
+  state          String?
+  updatedAt      DateTime       @db.Date
+  username       String
+  Notification   Notification[]
+  order          Order[]
+
+  @@map("users")
+}
