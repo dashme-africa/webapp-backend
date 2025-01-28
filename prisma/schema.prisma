@@ -86,6 +86,7 @@ model Product {
   title             String
   updatedAt         DateTime            @db.Date
   uploader          String              @db.ObjectId
+  user              User                @relation(fields: [uploader], references: [id])
   videoUrl          String
   adminNotification AdminNotification[]
   order             Order[]
@@ -131,6 +132,7 @@ model User {
   state          String?
   updatedAt      DateTime       @db.Date
   username       String
+  products       Product[]
   Notification   Notification[]
   order          Order[]
 
