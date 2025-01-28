@@ -186,7 +186,7 @@ router.post("/", async (req, res) => {
 		await AdminNotification.create({
 			type: "product_pending",
 			message: `A new product "${createdProduct.title}" is pending approval.`,
-			productId: createdProduct._id,
+			productId: createdProduct.id,
 		});
 	} catch (error) {
 		res.status(500).json({ message: "Server Error", error: error.message });
@@ -310,7 +310,7 @@ router.post("/donate", async (req, res) => {
 		await AdminNotification.create({
 			type: "product_pending",
 			message: `A new product "${createdProduct.title}" is pending approval.`,
-			productId: createdProduct._id,
+			productId: createdProduct.id,
 		});
 	} catch (error) {
 		res.status(500).json({ message: "Server Error", error: error.message });
