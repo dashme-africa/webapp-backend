@@ -126,7 +126,8 @@ router.post("/", async (req, res) => {
 	}
 
 	try {
-		const user = await User.findById(uploader);
+		const user = await db.user.findUnique({ where: { id: uploader } });
+		// const user = await User.findById(uploader);
 		if (!user) return res.status(404).json({ message: "Uploader not found" });
 
 		// Validate user profile
@@ -152,43 +153,50 @@ router.post("/", async (req, res) => {
 				.json({ message: "Verify your bank details first." });
 
 		// Save product to the database
-		const product = new Product({
+		const data = {
 			title,
 			description,
 			category,
-			price,
+			price: +price,
 			priceCategory,
 			images: imagesArray,
 			primaryImage: imagesArray[parseInt(primaryImageIndex)],
 			location,
-			uploader,
+			// uploader,
 			tag: "For sale",
 			availability: true,
 			status: "pending",
-			videoUrl: video,
+			videoUrl: video || "",
 			specification,
 			condition,
-		});
+			user: { connect: { id: uploader } },
+		};
 
-		const createdProduct = await product.save();
+		const createdProduct = await db.product.create({ data });
 
 		// Respond with the newly created product
 		res.status(201).json(createdProduct);
 
 		// Create notifications
-		await Notification.create({
-			userId: uploader,
-			message: "Your product would undergo review.",
-			read: false,
-			timestamp: new Date(),
+		await db.notification.create({
+			data: {
+				userId: uploader,
+				message: "Your product would undergo review.",
+				read: false,
+				// timestamp: new Date(),
+			},
 		});
 
-		await AdminNotification.create({
-			type: "product_pending",
-			message: `A new product "${createdProduct.title}" is pending approval.`,
-			productId: createdProduct.id,
+		await db.adminNotification.create({
+			data: {
+				type: "product_pending",
+				message: `A new product "${createdProduct.title}" is pending approval.`,
+				productId: createdProduct.id,
+			},
 		});
 	} catch (error) {
+		console.log(error);
+
 		res.status(500).json({ message: "Server Error", error: error.message });
 	}
 });
@@ -278,7 +286,7 @@ router.post("/donate", async (req, res) => {
 				.json({ message: "Verify your bank details first." });
 
 		// Save product to the database
-		const product = new Product({
+		const data = {
 			title,
 			description,
 			category,
@@ -292,25 +300,30 @@ router.post("/donate", async (req, res) => {
 			videoUrl: video,
 			specification,
 			condition,
-		});
+			user: { connect: { id: uploader } },
+		};
 
-		const createdProduct = await product.save();
+		const createdProduct = await db.product.create({ data });
 
 		// Respond with the newly created product
 		res.status(201).json(createdProduct);
 
 		// Create notifications
-		await Notification.create({
-			userId: uploader,
-			message: "Your product would undergo review.",
-			read: false,
-			timestamp: new Date(),
+		await db.notification.create({
+			data: {
+				userId: uploader,
+				message: "Your product would undergo review.",
+				read: false,
+				// timestamp: new Date(),
+			},
 		});
 
-		await AdminNotification.create({
-			type: "product_pending",
-			message: `A new product "${createdProduct.title}" is pending approval.`,
-			productId: createdProduct.id,
+		await db.adminNotification.create({
+			data: {
+				type: "product_pending",
+				message: `A new product "${createdProduct.title}" is pending approval.`,
+				productId: createdProduct.id,
+			},
 		});
 	} catch (error) {
 		res.status(500).json({ message: "Server Error", error: error.message });

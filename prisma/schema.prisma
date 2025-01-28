@@ -32,11 +32,11 @@ model Admin {
 model Notification {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   v         Int?     @default(0) @map("__v")
-  createdAt DateTime @default(now()) @db.Date
   message   String
   read      Boolean
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @db.Date
 
   @@map("notifications")
 }
@@ -77,8 +77,8 @@ model Product {
   description       String
   images            String[]
   location          String
-  price             Int
-  priceCategory     String
+  price             Int                 @default(0)
+  priceCategory     String?
   primaryImage      String
   specification     String
   status            String
@@ -86,8 +86,8 @@ model Product {
   title             String
   updatedAt         DateTime            @updatedAt @db.Date
   uploader          String              @db.ObjectId
-  user              User                @relation(fields: [uploader], references: [id])
-  videoUrl          String
+  user              User?               @relation(fields: [uploader], references: [id])
+  videoUrl          String?
   adminNotification AdminNotification[]
   order             Order[]
 
