@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Notification = require("../models/Notification");
 const { protect } = require("../middleware/authMiddleware");
+const db = require("../db");
 
 // Fetch all notifications for the user
 router.get("/notifications", protect, async (req, res) => {
@@ -10,8 +11,12 @@ router.get("/notifications", protect, async (req, res) => {
 			return res.status(401).json({ message: "Unauthorized" });
 		}
 		const userId = req.user.id; // Extract the user ID from the request object
-		const notifications = await Notification.find({ userId }).sort({
-			createdAt: -1,
+		// const notifications = await Notification.find({ userId }).sort({
+		// 	createdAt: -1,
+		// });
+		const notifications = await db.notification.findMany({
+			where: { userId },
+			orderBy: { createdAt: "desc" },
 		});
 
 		res.status(200).json({
@@ -30,10 +35,15 @@ router.get("/notifications", protect, async (req, res) => {
 router.patch("/notifications/mark-read", protect, async (req, res) => {
 	try {
 		const userId = req.user.id; // Extract the user ID from the request object
-		await Notification.updateMany(
-			{ userId, read: false },
-			{ $set: { read: true } }
-		);
+		// await Notification.updateMany(
+		// 	{ userId, read: false },
+		// 	{ $set: { read: true } }
+		// );
+
+		await db.notification.updateMany({
+			where: { read: false, userId },
+			data: { read: true },
+		});
 
 		res.status(200).json({
 			message: "All notifications marked as read",
@@ -59,12 +69,19 @@ router.post("/notifications", async (req, res) => {
 		}
 
 		// Create the notification
-		const notification = await Notification.create({
-			message,
-			userId,
-			read: false, // Default to unread
-			timestamp: new Date(),
+		const notification = await db.notification.create({
+			data: {
+				message,
+				user: { connect: { id: userId } },
+				read: false, // Default to unread
+			},
 		});
+		// const notification = await Notification.create({
+		// 	message,
+		// 	userId,
+		// 	read: false, // Default to unread
+		// 	timestamp: new Date(),
+		// });
 
 		res.status(201).json({
 			success: true,
@@ -84,18 +101,17 @@ router.patch("/notifications/:id/mark-read", protect, async (req, res) => {
 	try {
 		const { id } = req.params;
 
-		// Find the notification
-		const notification = await Notification.findById(id);
+		// Find and update the notification
+		const notification = await db.notification.update({
+			where: { id },
+			data: { read: true },
+		});
 
 		if (!notification) {
 			return res
 				.status(404)
 				.json({ success: false, message: "Notification not found" });
 		}
-
-		// Update the read status
-		notification.read = true;
-		await notification.save();
 
 		res.status(200).json({
 			success: true,

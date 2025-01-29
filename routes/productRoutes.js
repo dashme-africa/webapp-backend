@@ -1,10 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Product = require("../models/Product");
-const User = require("../models/User");
 const cloudinary = require("cloudinary").v2;
-const Notification = require("../models/Notification");
-const AdminNotification = require("../models/AdminNotification");
 const db = require("../db");
 
 require("dotenv").config();
@@ -192,6 +189,7 @@ router.post("/", async (req, res) => {
 				type: "product_pending",
 				message: `A new product "${createdProduct.title}" is pending approval.`,
 				productId: createdProduct.id,
+				read: false,
 			},
 		});
 	} catch (error) {
@@ -260,7 +258,7 @@ router.post("/donate", async (req, res) => {
 	}
 
 	try {
-		const user = await User.findById(uploader);
+		const user = await db.user.findUnique({ where: { id: uploader } });
 		if (!user) return res.status(404).json({ message: "Uploader not found" });
 
 		// Validate user profile
@@ -323,6 +321,7 @@ router.post("/donate", async (req, res) => {
 				type: "product_pending",
 				message: `A new product "${createdProduct.title}" is pending approval.`,
 				productId: createdProduct.id,
+				read: false,
 			},
 		});
 	} catch (error) {
@@ -331,18 +330,3 @@ router.post("/donate", async (req, res) => {
 });
 
 module.exports = router;
-
-// router.patch('/:id/availability', async (req, res) => {
-//   try {
-//     const product = await Product.findById(req.params.id);
-//     if (!product) {
-//       return res.status(404).json({ message: 'Product not found' });
-//     }
-
-//     product.availability = !product.availability; // Toggle availability
-//     const updatedProduct = await product.save();
-//     res.status(200).json(updatedProduct);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Server Error', error: error.message });
-//   }
-// });
