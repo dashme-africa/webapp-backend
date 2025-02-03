@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const axios = require("axios");
 const Product = require("../models/Product");
 const db = require("../db");
+const env = require("../env");
 
 require("dotenv").config();
 
@@ -55,7 +56,8 @@ router.post("/register", async (req, res) => {
 
 	try {
 		// Check if user already exists
-		const userExists = await User.findOne({ email });
+		// const userExists = await User.findOne({ email });
+		const userExists = await db.user.findFirst({ where: { email } });
 
 		if (userExists) {
 			return res.status(400).json({ message: "Email already exists." });
@@ -133,8 +135,8 @@ router.post("/logout", (req, res) => {
 const transporter = nodemailer.createTransport({
 	service: "gmail",
 	auth: {
-		user: process.env.EMAIL_USERNAME, // Use your Gmail username
-		pass: process.env.EMAIL_PASSWORD, // Use your Gmail app password
+		user: env.EMAIL_USERNAME, // Use your Gmail username
+		pass: env.EMAIL_PASSWORD, // Use your Gmail app password
 	},
 	tls: {
 		rejectUnauthorized: false,
@@ -153,32 +155,38 @@ router.post("/forgot-password", async (req, res) => {
 
 	try {
 		// Find user by email
-		const user = await User.findOne({ email });
+		// const user = await User.findOne({ email });
+
+		// Generate a reset token
+		const resetPasswordToken = crypto.randomBytes(20).toString("hex");
+		const resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour from now
+		// Save token and expiration to user
+		// user.resetPasswordToken = resetToken;
+		// user.resetPasswordExpires = resetTokenExpiration;
+		// await user.save();
+		const user = await db.user.update({
+			where: { email },
+			data: { resetPasswordExpires, resetPasswordToken },
+		});
 
 		if (!user) {
 			return res.status(404).json({ message: "User not found." });
 		}
 
-		// Generate a reset token
-		const resetToken = crypto.randomBytes(20).toString("hex");
-		const resetTokenExpiration = Date.now() + 3600000; // 1 hour from now
-
-		// Save token and expiration to user
-		user.resetPasswordToken = resetToken;
-		user.resetPasswordExpires = resetTokenExpiration;
-		await user.save();
-
 		// Send the reset email
-		const resetURL = `${process.env.FRONTEND_URL_PRODUCTION}/reset-password?token=${resetToken}`;
+		const resetURL = `${env.FRONTEND_URL_PRODUCTION}/reset-password?token=${resetPasswordToken}`;
 
 		const mailOptions = {
-			from: process.env.EMAIL_USERNAME,
+			from: env.EMAIL_USERNAME,
 			to: user.email,
 			subject: "Password Reset Request",
 			text: `To reset your password, click the following link: ${resetURL}`,
 		};
+		console.log(resetURL);
 
 		transporter.sendMail(mailOptions, (err, info) => {
+			console.log("Error sending email", err);
+
 			if (err) {
 				return res.status(500).json({
 					message: "Error sending email. Please try again.",
@@ -193,7 +201,7 @@ router.post("/forgot-password", async (req, res) => {
 		console.error("Error in forgot password:", error.message);
 		res
 			.status(500)
-			.json({ message: "Internal Server Error", details: err.message });
+			.json({ message: "Internal Server Error", details: error.message });
 	}
 });
 
@@ -202,23 +210,32 @@ router.post("/reset-password", async (req, res) => {
 
 	try {
 		// Find the user by token and ensure the token is not expired
-		const user = await User.findOne({
-			resetPasswordToken: token,
-			resetPasswordExpires: { $gt: Date.now() }, // Ensure the token has not expired
+		const user = await db.user.findFirst({
+			where: {
+				resetPasswordToken: token,
+			},
 		});
+		// const user = await User.findOne({
+		// 	resetPasswordToken: token,
+		// 	resetPasswordExpires: { $gt: Date.now() }, // Ensure the token has not expired
+		// });
 
-		if (!user) {
+		if (!user || user.resetPasswordExpires.getMilliseconds() > Date.now()) {
 			return res.status(400).json({ message: "Invalid or expired token." });
 		}
 
-		user.password = password;
+		// user.password = password;
 
-		// Clear the reset token and expiration fields
-		user.resetPasswordToken = undefined;
-		user.resetPasswordExpires = undefined;
+		// // Clear the reset token and expiration fields
+		// user.resetPasswordToken = undefined;
+		// user.resetPasswordExpires = undefined;
 
-		// Save the updated user
-		await user.save();
+		// // Save the updated user
+		// await user.save();
+		await db.user.update({
+			where: { id: user.id },
+			data: { resetPasswordExpires: null, resetPasswordToken: "" },
+		});
 
 		res.status(200).json({ message: "Password reset successful." });
 	} catch (error) {
@@ -234,9 +251,13 @@ router.get("/message-profile", async (req, res) => {
 		return res.status(401).json({ ok: false, message: "User not found" });
 
 	try {
-		const userProfile = await User.findOne({ username });
+		// const userProfile = await User.findOne({ username });
+		const userProfile = await db.user.findFirst({ where: { username } });
 
-		const products = await Product.find({ uploader: userProfile.id });
+		// const products = await Product.find({ uploader: userProfile.id });
+		const products = await db.product.findFirst({
+			where: { uploader: userProfile.id },
+		});
 
 		if (!userProfile)
 			return res.status(401).json({ ok: false, message: "User not found" });

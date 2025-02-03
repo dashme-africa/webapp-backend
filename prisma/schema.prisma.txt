@@ -3,46 +3,52 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model AdminNotification {
-  id        String   @id @default(cuid())
-  v         Int?     @default(0) 
-  createdAt DateTime @default(now())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  v         Int?     @default(0) @map("__v")
+  createdAt DateTime @default(now()) @db.Date
   message   String
-  productId String   
+  productId String   @db.ObjectId
   product   Product  @relation(fields: [productId], references: [id])
   read      Boolean
   type      String
+
+  @@map("adminnotifications")
 }
 
 model Admin {
-  id       String @id @default(cuid())
-  v        Int?   @default(0) 
-  email    String @unique
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  v        Int?   @default(0) @map("__v")
+  email    String @unique(map: "email_1")
   password String
+
+  @@map("admins")
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  v         Int?     @default(0) 
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  v         Int?     @default(0) @map("__v")
   message   String
   read      Boolean
-  userId    String   
+  userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Date
+
+  @@map("notifications")
 }
 
 model Order {
-  id                   String        @id @default(cuid())
-  v                    Int?          @default(0) 
+  id                   String        @id @default(auto()) @map("_id") @db.ObjectId
+  v                    Int?          @default(0) @map("__v")
   amount               Int
   buyerEmail           String
-  createdAt            DateTime      @default(now())
+  createdAt            DateTime      @default(now()) @db.Date
   productAmount        Int
-  productId            String        
+  productId            String        @db.ObjectId
   product              Product       @relation(fields: [productId], references: [id])
   quantity             Int
   rateAmount           Int
@@ -54,19 +60,21 @@ model Order {
   transactionCharge    Int
   transactionReference String //@unique
   // transaction          Transaction?
-  updatedAt            DateTime      @updatedAt
-  userId               String        
+  updatedAt            DateTime      @updatedAt @db.Date
+  userId               String        @db.ObjectId
   user                 User          @relation(fields: [userId], references: [id])
   Transaction          Transaction[]
+
+  @@map("orders")
 }
 
 model Product {
-  id                String              @id @default(cuid())
-  v                 Int?                @default(0) 
+  id                String              @id @default(auto()) @map("_id") @db.ObjectId
+  v                 Int?                @default(0) @map("__v")
   availability      Boolean
   category          String
   condition         String
-  createdAt         DateTime            @default(now())
+  createdAt         DateTime            @default(now()) @db.Date
   description       String
   images            String[]
   location          String
@@ -77,42 +85,46 @@ model Product {
   status            String
   tag               String
   title             String
-  updatedAt         DateTime            @updatedAt
-  uploader          String              
+  updatedAt         DateTime            @updatedAt @db.Date
+  uploader          String              @db.ObjectId
   user              User?               @relation(fields: [uploader], references: [id])
   videoUrl          String?
   adminNotification AdminNotification[]
   order             Order[]
+
+  @@map("products")
 }
 
 model Transaction {
-  id              String   @id @default(cuid())
-  v               Int?     @default(0) 
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  v               Int?     @default(0) @map("__v")
   amount          Int
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @db.Date
   currency        String
   customerEmail   String
   gatewayResponse String
   order           Order?   @relation(fields: [orderId], references: [id])
-  orderId         String?  
-  paidAt          DateTime
+  orderId         String   @db.ObjectId
+  paidAt          DateTime @db.Date
   paymentMethod   String
   reference       String //@unique
   status          String
   transactionId   String
-  updatedAt       DateTime @updatedAt
+  updatedAt       DateTime @updatedAt @db.Date
+
+  @@map("transactions")
 }
 
 model User {
-  id                   String         @id @default(cuid())
-  v                    Int?           @default(0) 
+  id                   String         @id @default(auto()) @map("_id") @db.ObjectId
+  v                    Int?           @default(0) @map("__v")
   accountName          String?
   accountNumber        String?
   bankName             String?
   bio                  String?
   city                 String?
   country              String?
-  email                String         @unique
+  email                String         @unique(map: "email_1")
   fullName             String
   isVerified           Boolean        @default(false)
   password             String
@@ -125,6 +137,8 @@ model User {
   products             Product[]
   Notification         Notification[]
   order                Order[]
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  createdAt            DateTime       @default(now()) @db.Date
+  updatedAt            DateTime       @updatedAt @db.Date
+
+  @@map("users")
 }

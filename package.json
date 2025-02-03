@@ -31,7 +31,10 @@
 		"zod": "^3.24.1"
 	},
 	"devDependencies": {
+		"@eslint/js": "^9.19.0",
 		"@prisma/studio": "^0.504.0",
+		"eslint": "^9.19.0",
+		"globals": "^15.14.0",
 		"prisma": "^6.2.1"
 	}
 }

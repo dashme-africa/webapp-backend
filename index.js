@@ -19,6 +19,7 @@ const Transaction = require("./models/Transaction");
 const Order = require("./models/Order");
 const { protect } = require("./middleware/authMiddleware");
 const env = require("./env");
+const db = require("./db");
 
 dotenv.config();
 
@@ -120,7 +121,7 @@ app.post("/api/rates", async (req, res) => {
 	const { carrierName, type, toAddress, fromAddress, parcels, items } =
 		req.body;
 
-	console.log(req.body);
+	// console.log(req.body);
 	if (
 		!carrierName ||
 		!type ||
@@ -172,7 +173,7 @@ app.post("/api/rates", async (req, res) => {
 		);
 
 		res.status(200).json(response.data);
-		console.log(response.data);
+		// console.log(response.data);
 	} catch (error) {
 		console.error("Error fetching couriers:", error);
 
@@ -236,9 +237,9 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 	const { reference } = req.params;
 
 	try {
-		console.log(
-			`Starting transaction verification for reference: ${reference}`
-		);
+		// console.log(
+		// 	`Starting transaction verification for reference: ${reference}`
+		// );
 
 		// Verify the Paystack transaction
 		const response = await axios.get(
@@ -250,16 +251,16 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 			}
 		);
 
-		console.log("Transaction verification response:", response.data);
+		// console.log("Transaction verification response:", response.data);
 
 		// Ensure the transaction was successful
 		if (response.data.data.status === "success") {
 			const transactionData = response.data.data;
-			console.log("Transaction data:", transactionData);
+			// console.log("Transaction data:", transactionData);
 
 			const { redis_key, rate_id, order_id } = transactionData.metadata;
 			// Create and save the transaction
-			const newTransaction = new Transaction({
+			const newTransaction = {
 				transactionId: transactionData.id,
 				reference: transactionData.reference,
 				amount: transactionData.amount,
@@ -270,16 +271,21 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 				paymentMethod: transactionData.channel,
 				paidAt: transactionData.paid_at,
 				gatewayResponse: transactionData.gateway_response,
-			});
+			};
 			try {
-				await newTransaction.save();
+				// await newTransaction.save();
+				await db.transaction.create({ data: newTransaction });
 				// Update the Order with the transactionId
-				await Order.findOneAndUpdate(
-					{ _id: order_id },
-					{ $set: { transactionReference: transactionData.reference } },
-					{ new: true }
-				);
-				console.log("Order updated with transactionId");
+				// await Order.findOneAndUpdate(
+				// 	{ _id: order_id },
+				// 	{ $set: { transactionReference: transactionData.reference } },
+				// 	{ new: true }
+				// );
+				await db.order.update({
+					where: { id: order_id },
+					data: { transactionReference: transactionData.reference },
+				});
+				// console.log("Order updated with transactionId");
 			} catch (error) {
 				console.error(
 					"Error saving transaction and updating order with transactionId:",
@@ -296,13 +302,13 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 				delivery_note: "Your delivery is on the way",
 			};
 
-			console.log("Booking payload:", bookingPayload);
+			// console.log("Booking payload:", bookingPayload);
 
 			let bookingResponse = null;
 
 			try {
 				// Make the booking API request
-				console.log("Sending booking request...");
+				// console.log("Sending booking request...");
 				bookingResponse = await axios.post(
 					`${process.env.GOSHIIP_BASE_URL}/bookshipment`,
 					bookingPayload,
@@ -313,13 +319,13 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 					}
 				);
 
-				console.log("Booking response:", bookingResponse.data);
+				// console.log("Booking response:", bookingResponse.data);
 
 				// Check if booking was successful
 				if (bookingResponse.data.status) {
 					const shipmentId = bookingResponse.data.data.shipmentId; // Get the shipment ID
 					const shipmentReference = bookingResponse.data.data.reference;
-					console.log(`Booking successful. Shipment ID: ${shipmentReference}`);
+					// console.log(`Booking successful. Shipment ID: ${shipmentReference}`);
 
 					try {
 						// Update the Order with the shipmentId
@@ -328,7 +334,7 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 							{ $set: { shipmentReference } },
 							{ new: true }
 						);
-						console.log("Order updated with shipmentReference");
+						// console.log("Order updated with shipmentReference");
 					} catch (error) {
 						console.error(
 							"Error updating order with shipmentReference:",
@@ -338,7 +344,7 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 
 					try {
 						// Trigger the Assign API with shipment_id in the body
-						console.log(`Triggering Assign API for shipment ID: ${shipmentId}`);
+						// console.log(`Triggering Assign API for shipment ID: ${shipmentId}`);
 						const assignPayload = {
 							shipment_id: shipmentId,
 						};
@@ -353,11 +359,11 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 							}
 						);
 
-						console.log("Assign response:", assignResponse.data);
+						// console.log("Assign response:", assignResponse.data);
 
 						// Handle assign response
 						if (assignResponse.status === 200) {
-							console.log("Shipment assignment successful.");
+							// console.log("Shipment assignment successful.");
 							res.status(200).json({
 								message:
 									"Payment verified, shipment booked, and assignment successful.",
@@ -373,7 +379,7 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 								assignStatus: assignResponse.data.message,
 							});
 						} else {
-							console.log("Assignment failed:", assignResponse.data.message);
+							// console.log("Assignment failed:", assignResponse.data.message);
 							res.status(assignResponse.status).json({
 								message: "Shipment booked but assignment failed.",
 								assignStatus: assignResponse.data.message,
@@ -390,7 +396,7 @@ app.get("/api/verify-transaction/:reference", async (req, res) => {
 						});
 					}
 				} else {
-					console.log("Booking failed:", bookingResponse.data.message);
+					// console.log("Booking failed:", bookingResponse.data.message);
 					res.status(400).json({
 						message: "Booking failed.",
 						bookingStatus: bookingResponse.data.message,
@@ -433,7 +439,10 @@ app.get("/api/transaction/verify/:reference", async (req, res) => {
 
 	try {
 		// Retrieve the transaction
-		const transaction = await Transaction.findOne({ reference });
+		// const transaction = await Transaction.findOne({ reference });
+		const transaction = await db.transaction.findFirst({
+			where: { reference },
+		});
 
 		if (transaction) {
 			// Format the transaction data
@@ -464,9 +473,13 @@ app.get("/api/transactions", protect, async (req, res) => {
 		// Replace with the logged-in user's email or ID
 		const customerEmail = req.user.email;
 
-		const transactions = await Transaction.find({ customerEmail }).sort({
-			paidAt: -1,
+		const transactions = await db.transaction.findMany({
+			where: { customerEmail },
+			orderBy: { paidAt: "desc" },
 		});
+		// const transactions = await Transaction.find({ customerEmail }).sort({
+		// 	paidAt: -1,
+		// });
 
 		if (!transactions.length) {
 			return res
@@ -608,14 +621,23 @@ app.get("/api/shipments/cancel/:reference", async (req, res) => {
 app.get("/api/orders/user/:userId", async (req, res) => {
 	try {
 		const userId = req.params.userId;
-		const orders = await Order.find({ userId })
-			.populate({ path: "productId", model: "Product" })
-			.populate({
-				path: "sellerId",
-				model: "User",
-				select: "username email phoneNumber",
-			})
-			.sort({ createdAt: -1 });
+
+		// const orders = await Order.find({ userId })
+		// 	.populate({ path: "productId", model: "Product" })
+		// 	.populate({
+		// 		path: "sellerId",
+		// 		model: "User",
+		// 		select: "username email phoneNumber",
+		// 	})
+		// 	.sort({ createdAt: -1 });
+		const orders = await db.order.findMany({
+			where: { userId },
+			orderBy: { createdAt: "desc" },
+			include: {
+				user: { select: { username: true, email: true, phoneNumber: true } },
+				product: {},
+			},
+		});
 		res.json({ orders });
 	} catch (error) {
 		console.error(error);
@@ -658,3 +680,9 @@ module.exports = app;
 //     });
 //   }
 // });
+
+async () => {
+	await db.transaction.deleteMany({
+		where: { transactionId: "transactionData.id" },
+	});
+};

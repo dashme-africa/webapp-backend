@@ -4,6 +4,7 @@ const Order = require("../models/Order");
 const mongoose = require("mongoose");
 const axios = require("axios");
 const router = express.Router();
+const db = require("../db");
 
 require("dotenv").config();
 
@@ -37,7 +38,8 @@ router.get("/seller/:sellerId", async (req, res) => {
 	try {
 		const objectId = new mongoose.Types.ObjectId(sellerId);
 
-		const seller = await User.findOne({ _id: objectId });
+		// const seller = await User.findOne({ _id: objectId });
+		const seller = await db.user.findFirst({ where: { id: sellerId } });
 
 		if (!seller) {
 			//   console.log('Seller not found.');
@@ -62,7 +64,8 @@ router.get("/seller/:sellerId/bank-details", async (req, res) => {
 	try {
 		const objectId = new mongoose.Types.ObjectId(sellerId);
 
-		const seller = await User.findOne({ _id: objectId });
+		// const seller = await User.findOne({ _id: objectId });
+		const seller = await db.user.findFirst({ where: { id: sellerId } });
 
 		if (!seller) {
 			//   console.log('Seller not found.');
@@ -135,12 +138,10 @@ router.post("/subaccount", async (req, res) => {
 			"Error creating subaccount:",
 			error.response?.data || error.message
 		);
-		res
-			.status(500)
-			.json({
-				message: "Failed to create subaccount",
-				error: error.response?.data,
-			});
+		res.status(500).json({
+			message: "Failed to create subaccount",
+			error: error.response?.data,
+		});
 	}
 });
 

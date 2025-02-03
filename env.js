@@ -13,6 +13,7 @@ const envSchema = z.object({
 	PAYSTACK_SECRET_KEY: z.string(),
 	GOSHIIP_BASE_URL: z.string(),
 	GOSHIIP_API_KEY: z.string(),
+	FRONTEND_URL_PRODUCTION: z.string(),
 	GOSHIP_USER_ID: z.string(),
 });
 

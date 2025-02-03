@@ -43,9 +43,13 @@ router.put("/:id", async (req, res) => {
 	const updates = req.body;
 
 	try {
-		const updatedProduct = await Product.findByIdAndUpdate(id, updates, {
-			new: true,
+		const updatedProduct = await db.product.update({
+			where: { id },
+			data: updates,
 		});
+		// const updatedProduct = await Product.findByIdAndUpdate(id, updates, {
+		// 	new: true,
+		// });
 		if (!updatedProduct) {
 			return res.status(404).json({ message: "Product not found" });
 		}
@@ -60,7 +64,8 @@ router.delete("/delete/:id", async (req, res) => {
 	const { id } = req.params;
 
 	try {
-		const deletedProduct = await Product.findByIdAndDelete(id);
+		const deletedProduct = await db.product.delete({ where: { id } });
+		// const deletedProduct = await Product.findByIdAndDelete(id);
 		if (!deletedProduct) {
 			return res.status(404).json({ message: "Product not found" });
 		}
