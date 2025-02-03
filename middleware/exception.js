@@ -1,8 +1,8 @@
 const { NextFunction, Request, Response } = require("express");
-const { ApiResponse, ErrorResponse, STATUS_CODE } = require("./response.js");
 const {
 	PrismaClientKnownRequestError,
 } = require("@prisma/client/runtime/library");
+const { STATUS_CODE, ErrorResponse } = require("./response");
 
 class AppError extends Error {
 	/**
@@ -32,8 +32,8 @@ class ValidationError extends Error {
 
 /**@type {(error: any,req: Request,res: Response,next: NextFunction)=>unknown} */
 const errorHandler = (error, req, res, next) => {
-	Logger.error(`path: ${req.path} method: ${req.method}`);
-	Logger.error(error);
+	console.log(`path: ${req.path} method: ${req.method}`);
+	console.log(error);
 
 	if (error instanceof AppError)
 		return new ErrorResponse(
@@ -50,7 +50,7 @@ const errorHandler = (error, req, res, next) => {
 			error.details,
 			STATUS_CODE.BAD_REQUEST
 		);
-
+	/* 
 	if (error instanceof JsonWebTokenError)
 		return new ErrorResponse(
 			res,
@@ -58,7 +58,7 @@ const errorHandler = (error, req, res, next) => {
 			error,
 			STATUS_CODE.UNAUTHORIZED
 		);
-
+ */
 	if (error instanceof PrismaClientKnownRequestError && error.code == "P2002")
 		return new ErrorResponse(
 			res,

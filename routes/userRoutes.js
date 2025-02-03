@@ -1,12 +1,9 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const User = require("../models/User");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
-const axios = require("axios");
-const Product = require("../models/Product");
 const db = require("../db");
 const env = require("../env");
 
@@ -56,7 +53,6 @@ router.post("/register", async (req, res) => {
 
 	try {
 		// Check if user already exists
-		// const userExists = await User.findOne({ email });
 		const userExists = await db.user.findFirst({ where: { email } });
 
 		if (userExists) {
@@ -102,7 +98,6 @@ router.post("/login", async (req, res) => {
 	}
 
 	try {
-		// const user = await User.findOne({ email });
 		const user = await db.user.findFirst({ where: { email } });
 
 		// Check if user exists and compare passwords
@@ -155,7 +150,6 @@ router.post("/forgot-password", async (req, res) => {
 
 	try {
 		// Find user by email
-		// const user = await User.findOne({ email });
 
 		// Generate a reset token
 		const resetPasswordToken = crypto.randomBytes(20).toString("hex");
@@ -163,7 +157,6 @@ router.post("/forgot-password", async (req, res) => {
 		// Save token and expiration to user
 		// user.resetPasswordToken = resetToken;
 		// user.resetPasswordExpires = resetTokenExpiration;
-		// await user.save();
 		const user = await db.user.update({
 			where: { email },
 			data: { resetPasswordExpires, resetPasswordToken },
@@ -184,7 +177,7 @@ router.post("/forgot-password", async (req, res) => {
 		};
 		console.log(resetURL);
 
-		transporter.sendMail(mailOptions, (err, info) => {
+		transporter.sendMail(mailOptions, (err) => {
 			console.log("Error sending email", err);
 
 			if (err) {
@@ -206,7 +199,7 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 router.post("/reset-password", async (req, res) => {
-	const { token, password } = req.body;
+	const { token } = req.body;
 
 	try {
 		// Find the user by token and ensure the token is not expired
@@ -215,7 +208,6 @@ router.post("/reset-password", async (req, res) => {
 				resetPasswordToken: token,
 			},
 		});
-		// const user = await User.findOne({
 		// 	resetPasswordToken: token,
 		// 	resetPasswordExpires: { $gt: Date.now() }, // Ensure the token has not expired
 		// });
@@ -231,7 +223,6 @@ router.post("/reset-password", async (req, res) => {
 		// user.resetPasswordExpires = undefined;
 
 		// // Save the updated user
-		// await user.save();
 		await db.user.update({
 			where: { id: user.id },
 			data: { resetPasswordExpires: null, resetPasswordToken: "" },
@@ -251,7 +242,6 @@ router.get("/message-profile", async (req, res) => {
 		return res.status(401).json({ ok: false, message: "User not found" });
 
 	try {
-		// const userProfile = await User.findOne({ username });
 		const userProfile = await db.user.findFirst({ where: { username } });
 
 		// const products = await Product.find({ uploader: userProfile.id });

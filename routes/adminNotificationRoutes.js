@@ -1,60 +1,53 @@
 const express = require("express");
 const router = express.Router();
-const AdminNotification = require("../models/AdminNotification");
 const { protectAdmin } = require("../middleware/adminMiddleware");
 const db = require("../db");
+const { ApiResponse, STATUS_CODE } = require("../middleware/response");
+const { Middleware, Controller } = require("../middleware/handlers");
+const { AppError } = require("../middleware/exception");
 
 // Fetch notifications for the logged-in admin
-router.get("/notifications", protectAdmin, async (req, res) => {
-	try {
-		// Assuming the logged-in admin's userId is attached to req.user
-
-		// const notifications = await AdminNotification.find()
-		//     .sort({ createdAt: -1 }) // Sort by latest notifications first
+router.get(
+	"/notifications",
+	Middleware(protectAdmin),
+	Controller(async (req, res) => {
 		const notifications = await db.adminNotification.findMany({
 			orderBy: { createdAt: "desc" },
 		});
 
-		res.status(200).json({
-			message: "Notifications fetched successfully",
-			data: notifications,
-		});
-	} catch (error) {
-		console.error("Error fetching notifications:", error);
-		res
-			.status(500)
-			.json({ message: "Internal server error", error: error.message });
-	}
-});
+		return new ApiResponse(
+			res,
+			"Notifications fetched successfully",
+			notifications
+		);
+	})
+);
 
 // Mark all notifications as read
-router.patch("/notifications/mark-all-read", protectAdmin, async (req, res) => {
-	try {
-		// await AdminNotification.updateMany(
-		// 	{ read: false },
-		// 	{ $set: { read: true } }
-		// );
-
+router.patch(
+	"/notifications/mark-all-read",
+	Middleware(protectAdmin),
+	Controller(async (req, res) => {
 		await db.adminNotification.updateMany({
 			where: { read: false },
 			data: { read: true },
 		});
 
-		// console.log();
-		res.status(200).json({
-			message: "All notifications marked as read",
-		});
-	} catch (error) {
-		console.error("Error marking notifications as read:", error);
-		res
-			.status(500)
-			.json({ message: "Internal server error", error: error.message });
-	}
-});
+		return new ApiResponse(res, "All notifications marked as read");
+	})
+);
 
-router.patch("/notifications/:id/mark-read", protectAdmin, async (req, res) => {
-	try {
+router.patch(
+	"/notifications/:id/mark-read",
+	Middleware(protectAdmin),
+	Controller(async (req, res) => {
 		const { id } = req.params;
+
+		if (!id)
+			throw new AppError(
+				"Notification ID is required",
+				STATUS_CODE.BAD_REQUEST
+			);
 
 		// Find the notification
 		// const notification = await AdminNotification.findById(id);
@@ -62,28 +55,16 @@ router.patch("/notifications/:id/mark-read", protectAdmin, async (req, res) => {
 			where: { id },
 			data: { read: true },
 		});
-		if (!notification) {
-			return res
-				.status(404)
-				.json({ success: false, message: "Notification not found" });
-		}
+
+		if (!notification)
+			throw new AppError("Notification not found", STATUS_CODE.NOT_FOUND);
 
 		// Update the read status
 		// notification.read = true;
 		// await notification.save();
 
-		res.status(200).json({
-			success: true,
-			message: "Notification marked as read",
-			notification,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Server error",
-			error: error.message,
-		});
-	}
-});
+		return new ApiResponse(res, "Notification marked as read", notification);
+	})
+);
 
 module.exports = router;

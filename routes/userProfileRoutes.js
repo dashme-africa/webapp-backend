@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/authMiddleware");
-const User = require("../models/User");
 const multer = require("multer");
 const streamifier = require("streamifier");
 const cloudinary = require("cloudinary").v2;

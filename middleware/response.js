@@ -27,27 +27,31 @@ class ApiResponse {
 // create and export a class in commonjs style for use in other files
 
 class ErrorResponse {
+	/**@type {Request} */
+	#res;
+
 	/**
 	 * @param {Response} res
 	 * @param {string} message
 	 * @param {unknown} [error]
 	 * @param {number} [statusCode=STATUS_CODE.INTERNAL_SERVER_ERROR]
 	 */
+
 	constructor(
 		res,
 		message,
 		error,
 		statusCode = STATUS_CODE.INTERNAL_SERVER_ERROR
 	) {
-		this.res = res;
+		this.#res = res;
 		this.message = message;
 		this.error = error;
 		this.statusCode = statusCode;
-		this.send();
+		this.#send();
 	}
 
-	send() {
-		return this.res.status(this.statusCode).json({
+	#send() {
+		return this.#res.status(this.statusCode).json({
 			ok: false,
 			message: this.message,
 			error: this.error,
@@ -80,7 +84,7 @@ const UserType = Object.freeze({
 	ADMIN: "admin",
 });
 
-module.export = {
+module.exports = {
 	ApiResponse,
 	ErrorResponse,
 	STATUS_CODE,

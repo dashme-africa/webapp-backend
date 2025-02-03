@@ -1,35 +1,31 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
 const db = require("../db");
+const env = require("../env");
 
 require("dotenv").config();
 
 const protect = async (req, res, next) => {
-	let token;
-
 	if (
-		req.headers.authorization &&
-		req.headers.authorization.startsWith("Bearer")
-	) {
-		try {
-			token = req.headers.authorization.split(" ")[1];
+		!req?.headers?.authorization &&
+		!req?.headers?.authorization?.startsWith("Bearer") &&
+		!req?.cookies?.["auth"]
+	)
+		throw new AppError("Not authorized, no token", STATUS_CODE.UNAUTHORIZED);
 
-			// Decode token
-			const decoded = jwt.verify(token, process.env.TOKEN_SECRET_KEY);
+	const token = req.headers.authorization.split(" ")[1] || req.cookies["auth"];
 
-			// Attach user to request
+	if (!token)
+		throw new AppError("Not authorized, no token", STATUS_CODE.UNAUTHORIZED);
 
-			req.user = await db.user.findUnique({ where: { id: decoded.id } });
+	const decoded = jwt.verify(token, process.env.ADMIN_TOKEN_SECRET_KEY);
 
-			next();
-		} catch (error) {
-			res.status(401).json({ message: "Not authorized, token failed" });
-		}
-	}
+	const user = await db.user.findUnique({ where: { id: decoded.id } });
 
-	if (!token) {
-		res.status(401).json({ message: "Not authorized, no token" });
-	}
+	if (!user) throw new AppError("Invalid token", STATUS_CODE.UNAUTHORIZED);
+
+	req.user = user;
+
+	next();
 };
 
 module.exports = { protect };

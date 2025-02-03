@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const Product = require("../models/Product");
 const db = require("../db");
+const { Controller } = require("../middleware/handlers");
+const { STATUS_CODE, ApiResponse } = require("../middleware/response");
+const { AppError } = require("../middleware/exception");
 const cloudinary = require("cloudinary").v2;
 
 require("dotenv").config();
@@ -13,15 +15,16 @@ cloudinary.config({
 	api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-router.get("/", async (req, res) => {
-	const { uploader } = req.query;
-	// console.log("Uploader Query Param:", uploader);
+router.get(
+	"/",
+	Controller(async (req, res) => {
+		const { uploader } = req.query;
+		// console.log("Uploader Query Param:", uploader);
 
-	if (!uploader) {
-		return res.status(400).json({ message: "Uploader ID is required" });
-	}
+		if (!uploader) {
+			throw new AppError("Uploader ID is required", STATUS_CODE.BAD_REQUEST);
+		}
 
-	try {
 		const myProducts = await db.product.findMany({ where: { uploader } });
 
 		if (!myProducts) {
@@ -30,50 +33,44 @@ router.get("/", async (req, res) => {
 				.json({ message: "No products found for this uploader" });
 		}
 
-		res.status(200).json(myProducts);
-	} catch (error) {
-		console.log(error);
+		return new ApiResponse(res, "Products retrieved successfully", myProducts);
+	})
+);
 
-		res.status(500).json({ message: "Server Error", error: error.message });
-	}
-});
+router.put(
+	"/:id",
+	Controller(async (req, res) => {
+		const { id } = req.params;
+		if (!id)
+			throw new AppError("Product ID is required", STATUS_CODE.BAD_REQUEST);
 
-router.put("/:id", async (req, res) => {
-	const { id } = req.params;
-	const updates = req.body;
+		const updates = req.body;
 
-	try {
 		const updatedProduct = await db.product.update({
 			where: { id },
 			data: updates,
 		});
-		// const updatedProduct = await Product.findByIdAndUpdate(id, updates, {
-		// 	new: true,
-		// });
 		if (!updatedProduct) {
-			return res.status(404).json({ message: "Product not found" });
+			throw new AppError("Product not found", STATUS_CODE.NOT_FOUND);
 		}
+		return new ApiResponse(res, "Product updated successfully", updatedProduct);
+	})
+);
 
-		res.status(200).json(updatedProduct);
-	} catch (error) {
-		res.status(500).json({ message: "Server Error", error: error.message });
-	}
-});
+router.delete(
+	"/delete/:id",
+	Controller(async (req, res) => {
+		const { id } = req.params;
+		if (!id)
+			throw new AppError("Product ID is required", STATUS_CODE.BAD_REQUEST);
 
-router.delete("/delete/:id", async (req, res) => {
-	const { id } = req.params;
-
-	try {
 		const deletedProduct = await db.product.delete({ where: { id } });
-		// const deletedProduct = await Product.findByIdAndDelete(id);
 		if (!deletedProduct) {
-			return res.status(404).json({ message: "Product not found" });
+			throw new AppError("Product not found", STATUS_CODE.NOT_FOUND);
 		}
 
-		res.status(200).json({ message: "Product deleted successfully" });
-	} catch (error) {
-		res.status(500).json({ message: "Server Error", error: error.message });
-	}
-});
+		return new ApiResponse(res, "Product deleted successfully", deletedProduct);
+	})
+);
 
 module.exports = router;
