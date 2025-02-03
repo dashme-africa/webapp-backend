@@ -2,69 +2,72 @@ const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/authMiddleware");
 const db = require("../db");
+const { AppError, ValidationError } = require("../middleware/exception");
+const { STATUS_CODE, ApiResponse } = require("../middleware/response");
+const { Controller, Middleware } = require("../middleware/handlers");
+const { z } = require("zod");
+const { getStringValidation } = require("../validation/schema");
 
 // Fetch all notifications for the user
-router.get("/notifications", protect, async (req, res) => {
-	try {
+router.get(
+	"/notifications",
+	Middleware(protect),
+	Controller(async (req, res) => {
 		if (!req.user) {
-			return res.status(401).json({ message: "Unauthorized" });
+			throw new AppError("Unauthorized", STATUS_CODE.UNAUTHORIZED);
 		}
-		const userId = req.user.id; // Extract the user ID from the request object
-		// const notifications = await Notification.find({ userId }).sort({
-		// 	createdAt: -1,
-		// });
+		const userId = req.user.id;
+
 		const notifications = await db.notification.findMany({
 			where: { userId },
 			orderBy: { createdAt: "desc" },
 		});
 
-		res.status(200).json({
-			message: "Notifications retrieved successfully",
-			data: notifications,
-		});
-	} catch (error) {
-		console.error("Error fetching notifications:", error);
-		res
-			.status(500)
-			.json({ message: "Internal server error", error: error.message });
-	}
-});
+		return new ApiResponse(
+			res,
+			"Notifications retrieved successfully",
+			notifications
+		);
+	})
+);
 
 // Mark all notifications as read
-router.patch("/notifications/mark-read", protect, async (req, res) => {
-	try {
+router.patch(
+	"/notifications/mark-read",
+	Middleware(protect),
+	Controller(async (req, res) => {
 		const userId = req.user.id; // Extract the user ID from the request object
-		// await Notification.updateMany(
-		// 	{ userId, read: false },
-		// 	{ $set: { read: true } }
-		// );
 
 		await db.notification.updateMany({
 			where: { read: false, userId },
 			data: { read: true },
 		});
 
-		res.status(200).json({
-			message: "All notifications marked as read",
-		});
-	} catch (error) {
-		console.error("Error marking notifications as read:", error);
-		res
-			.status(500)
-			.json({ message: "Internal server error", error: error.message });
-	}
-});
+		return new ApiResponse(res, "All notifications marked as read");
+	})
+);
 
 // POST /api/notifications
-router.post("/notifications", async (req, res) => {
-	try {
-		const { message, userId } = req.body;
+router.post(
+	"/notifications",
+	Controller(async (req, res) => {
+		const validate = z
+			.object({
+				message: getStringValidation("Message"),
+				userId: getStringValidation("UserID"),
+			})
+			.safeParse(req.body);
+
+		if (!validate.success) throw new ValidationError(validate.error);
+
+		const { message, userId } = validate.data;
 
 		// Validation
 		if (!message || !userId) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Message and userId are required" });
+			throw new AppError(
+				"Message and userId are required",
+				STATUS_CODE.BAD_REQUEST
+			);
 		}
 
 		// Create the notification
@@ -75,30 +78,28 @@ router.post("/notifications", async (req, res) => {
 				read: false, // Default to unread
 			},
 		});
-		// const notification = await Notification.create({
-		// 	message,
-		// 	userId,
-		// 	read: false, // Default to unread
-		// 	timestamp: new Date(),
-		// });
 
-		res.status(201).json({
-			success: true,
+		return new ApiResponse(
+			res,
+			"Notification created successfully",
 			notification,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Server error",
-			error: error.message,
-		});
-	}
-});
+			STATUS_CODE.CREATED
+		);
+	})
+);
 
 // PATCH /api/notifications/:id/mark-read
-router.patch("/notifications/:id/mark-read", protect, async (req, res) => {
-	try {
+router.patch(
+	"/notifications/:id/mark-read",
+	Middleware(protect),
+	Controller(async (req, res) => {
 		const { id } = req.params;
+		if (!id) {
+			throw new AppError(
+				"Notification ID is required",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
 		// Find and update the notification
 		const notification = await db.notification.update({
@@ -107,23 +108,11 @@ router.patch("/notifications/:id/mark-read", protect, async (req, res) => {
 		});
 
 		if (!notification) {
-			return res
-				.status(404)
-				.json({ success: false, message: "Notification not found" });
+			throw new AppError("Notification not found", STATUS_CODE.NOT_FOUND);
 		}
 
-		res.status(200).json({
-			success: true,
-			message: "Notification marked as read",
-			notification,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Server error",
-			error: error.message,
-		});
-	}
-});
+		return new ApiResponse(res, "Notification marked as read", notification);
+	})
+);
 
 module.exports = router;

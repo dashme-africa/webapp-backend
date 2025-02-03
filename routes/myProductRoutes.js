@@ -44,6 +44,7 @@ router.put(
 		if (!id)
 			throw new AppError("Product ID is required", STATUS_CODE.BAD_REQUEST);
 
+		// ⚠️ TODO - Add validation for the request body
 		const updates = req.body;
 
 		const updatedProduct = await db.product.update({

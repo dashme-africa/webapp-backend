@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const cloudinary = require("cloudinary").v2;
 const db = require("../db");
+const { Controller } = require("../middleware/handlers");
+const { AppError } = require("../middleware/exception");
+const { STATUS_CODE, ApiResponse } = require("../middleware/response");
+const { profile } = require("console");
 
 require("dotenv").config();
 
@@ -13,11 +17,14 @@ cloudinary.config({
 });
 
 // Get all products or filter by category
-router.get("/", async (req, res) => {
-	// console.log(req.query); // Optional: for debugging purposes
-	try {
+router.get(
+	"/",
+	Controller(async (req, res) => {
+		// console.log(req.query); // Optional: for debugging purposes
 		const { category } = req.query; // Get the category from the query parameters
-		// const query = category ? { category } : {}; // If category exists, filter by it, else get all products
+		if (!category)
+			throw new AppError("Category is required", STATUS_CODE.BAD_REQUEST);
+
 		const where = category ? { category: category } : {}; // If category exists, filter by it, else get all products
 
 		// Fetch the products based on the query
@@ -27,104 +34,100 @@ router.get("/", async (req, res) => {
 			include: { user: {} },
 		});
 
-		res.status(200).json(products);
-	} catch (error) {
-		res.status(500).json({ message: "Server Error", error: error.message });
-	}
-});
+		return new ApiResponse(res, "", products);
+	})
+);
 
 // Get a product by ID
-router.get("/:id", async (req, res) => {
-	try {
-		// const product = await Product.findById(req.params.id).populate(
-		// 	"uploader",
-		// 	"username email _id profilePicture"
-		// );
+router.get(
+	"/:id",
+	Controller(async (req, res) => {
 		const product = await db.product.findFirst({
 			where: { id: req.params.id },
 			include: { user: true },
 		});
 
 		if (!product) {
-			return res.status(404).json({ message: "Product not found" });
+			throw new AppError("Product not found", STATUS_CODE.NOT_FOUND);
 		}
-
-		res.status(200).json(product);
-	} catch (error) {
-		// If the error is due to an invalid ObjectId
-		if (error.kind === "ObjectId") {
-			return res.status(404).json({ message: "Product not found" });
-		}
-		res.status(500).json({ message: "Server Error", error: error.message });
-	}
-});
+		return new ApiResponse(res, "", product);
+	})
+);
 
 // Create a new product for sale
-router.post("/", async (req, res) => {
-	const {
-		title,
-		description,
-		category,
-		price,
-		priceCategory,
-		location,
-		uploader,
-		primaryImageIndex,
-		specification,
-		condition,
-		images,
-		video,
-	} = req.body;
+router.post(
+	"/",
+	Controller(async (req, res) => {
+		const {
+			title,
+			description,
+			category,
+			price,
+			priceCategory,
+			location,
+			uploader,
+			primaryImageIndex,
+			specification,
+			condition,
+			images,
+			video,
+		} = req.body;
 
-	// Validation for required fields
-	if (
-		!title ||
-		!description ||
-		!category ||
-		!price ||
-		!priceCategory ||
-		!location ||
-		!specification ||
-		!condition
-	) {
-		return res.status(400).json({ message: "Please fill all required fields" });
-	}
+		// Validation for required fields
+		if (
+			!title ||
+			!description ||
+			!category ||
+			!price ||
+			!priceCategory ||
+			!location ||
+			!specification ||
+			!condition
+		) {
+			throw new AppError(
+				"Please fill all required fields",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	const imagesArray = images.split(", ");
+		const imagesArray = images.split(", ");
 
-	// Validate images
-	if (!images || imagesArray.length === 0) {
-		return res
-			.status(400)
-			.json({ message: "Please upload at least one product image" });
-	}
+		// Validate images
+		if (!images || imagesArray.length === 0) {
+			throw new AppError(
+				"Please upload at least one product image",
+				STATUS_CODE.BAD_GATEWAY
+			);
+		}
 
-	if (imagesArray.length > 10) {
-		return res
-			.status(400)
-			.json({ message: "You can upload a maximum of 10 images" });
-	}
+		if (imagesArray.length > 10) {
+			throw new AppError(
+				"You can upload a maximum of 10 images",
+				STATUS_CODE.BAD_GATEWAY
+			);
+		}
 
-	if (primaryImageIndex === null || primaryImageIndex === undefined) {
-		return res
-			.status(400)
-			.json({ message: "Please select a primary image for display" });
-	}
+		if (primaryImageIndex === null || primaryImageIndex === undefined) {
+			throw new AppError(
+				"Please select a primary image for display",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	// Ensure video is uploaded for specific categories
-	if (
-		["Accessories", "Household-Items", "Electronics"].includes(category) &&
-		(!video || video === "")
-	) {
-		return res
-			.status(400)
-			.json({ message: "Please upload a video for this category" });
-	}
+		// Ensure video is uploaded for specific categories
+		if (
+			["Accessories", "Household-Items", "Electronics"].includes(category) &&
+			(!video || video === "")
+		) {
+			throw new AppError(
+				"Please upload a video for this category",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	try {
 		const user = await db.user.findUnique({ where: { id: uploader } });
 		// const user = await User.findById(uploader);
-		if (!user) return res.status(404).json({ message: "Uploader not found" });
+		if (!user) throw new AppError("User not found", STATUS_CODE.NOT_FOUND);
 
 		// Validate user profile
 		if (
@@ -137,16 +140,17 @@ router.post("/", async (req, res) => {
 			!user.bio ||
 			!user.phoneNumber
 		) {
-			return res.status(403).json({
-				message:
-					"Please complete your profile info before uploading a product.",
-			});
+			throw new AppError(
+				"Please complete your profile info before uploading a product.",
+				STATUS_CODE.FORBIDDEN
+			);
 		}
 
 		if (!user.isVerified)
-			return res
-				.status(403)
-				.json({ message: "Verify your bank details first." });
+			throw new AppError(
+				"Verify your bank details first.",
+				STATUS_CODE.FORBIDDEN
+			);
 
 		// Save product to the database
 		const data = {
@@ -171,7 +175,6 @@ router.post("/", async (req, res) => {
 		const createdProduct = await db.product.create({ data });
 
 		// Respond with the newly created product
-		res.status(201).json(createdProduct);
 
 		// Create notifications
 		await db.notification.create({
@@ -191,74 +194,79 @@ router.post("/", async (req, res) => {
 				read: false,
 			},
 		});
-	} catch (error) {
-		console.log(error);
-
-		res.status(500).json({ message: "Server Error", error: error.message });
-	}
-});
+		throw new ApiResponse(res, "", createdProduct, STATUS_CODE.CREATED);
+	})
+);
 
 // Create a new product to donate
-router.post("/donate", async (req, res) => {
-	const {
-		title,
-		description,
-		category,
-		location,
-		uploader,
-		primaryImageIndex,
-		specification,
-		condition,
-		images,
-		video,
-	} = req.body;
+router.post(
+	"/donate",
+	Controller(async (req, res) => {
+		const {
+			title,
+			description,
+			category,
+			location,
+			uploader,
+			primaryImageIndex,
+			specification,
+			condition,
+			images,
+			video,
+		} = req.body;
 
-	// Validation for required fields
-	if (
-		!title ||
-		!description ||
-		!category ||
-		!location ||
-		!specification ||
-		!condition
-	) {
-		return res.status(400).json({ message: "Please fill all required fields" });
-	}
+		// Validation for required fields
+		if (
+			!title ||
+			!description ||
+			!category ||
+			!location ||
+			!specification ||
+			!condition
+		) {
+			throw new AppError(
+				"Please fill all required fields",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	const imagesArray = images.split(", ");
+		const imagesArray = images.split(", ");
 
-	// Validate images
-	if (!images || imagesArray.length === 0) {
-		return res
-			.status(400)
-			.json({ message: "Please upload at least one product image" });
-	}
+		// Validate images
+		if (!images || imagesArray.length === 0) {
+			throw new AppError(
+				"Please upload at least one product image",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	if (imagesArray.length > 10) {
-		return res
-			.status(400)
-			.json({ message: "You can upload a maximum of 10 images" });
-	}
+		if (imagesArray.length > 10) {
+			throw new AppError(
+				"You can upload a maximum of 10 images",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	if (primaryImageIndex === null || primaryImageIndex === undefined) {
-		return res
-			.status(400)
-			.json({ message: "Please select a primary image for display" });
-	}
+		if (primaryImageIndex === null || primaryImageIndex === undefined) {
+			throw new AppError(
+				"Please select a primary image for display",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	// Ensure video is uploaded for specific categories
-	if (
-		["Accessories", "Household-Items", "Electronics"].includes(category) &&
-		(!video || video === "")
-	) {
-		return res
-			.status(400)
-			.json({ message: "Please upload a video for this category" });
-	}
+		// Ensure video is uploaded for specific categories
+		if (
+			["Accessories", "Household-Items", "Electronics"].includes(category) &&
+			(!video || video === "")
+		) {
+			throw new AppError(
+				"Please upload a video for this category",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	try {
 		const user = await db.user.findUnique({ where: { id: uploader } });
-		if (!user) return res.status(404).json({ message: "Uploader not found" });
+		if (!user) throw new AppError("User not found", STATUS_CODE.NOT_FOUND);
 
 		// Validate user profile
 		if (
@@ -271,16 +279,17 @@ router.post("/donate", async (req, res) => {
 			!user.bio ||
 			!user.phoneNumber
 		) {
-			return res.status(403).json({
-				message:
-					"Please complete your profile info before uploading a product.",
-			});
+			throw new AppError(
+				"Please complete your profile info before uploading a product.",
+				STATUS_CODE.FORBIDDEN
+			);
 		}
 
 		if (!user.isVerified)
-			return res
-				.status(403)
-				.json({ message: "Verify your bank details first." });
+			throw new AppError(
+				"Verify your bank details first.",
+				STATUS_CODE.FORBIDDEN
+			);
 
 		// Save product to the database
 		const data = {
@@ -303,7 +312,6 @@ router.post("/donate", async (req, res) => {
 		const createdProduct = await db.product.create({ data });
 
 		// Respond with the newly created product
-		res.status(201).json(createdProduct);
 
 		// Create notifications
 		await db.notification.create({
@@ -323,9 +331,8 @@ router.post("/donate", async (req, res) => {
 				read: false,
 			},
 		});
-	} catch (error) {
-		res.status(500).json({ message: "Server Error", error: error.message });
-	}
-});
+		return new ApiResponse(res, "", createdProduct);
+	})
+);
 
 module.exports = router;
