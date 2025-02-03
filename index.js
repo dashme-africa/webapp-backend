@@ -1,5 +1,4 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const axios = require("axios");
@@ -15,11 +14,10 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const myProductRoutes = require("./routes/myProductRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const adminNotificationRoutes = require("./routes/adminNotificationRoutes");
-const Transaction = require("./models/Transaction");
-const Order = require("./models/Order");
 const { protect } = require("./middleware/authMiddleware");
 const env = require("./env");
 const db = require("./db");
+const { errorHandler } = require("./middleware/exception");
 
 dotenv.config();
 
@@ -53,10 +51,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // MongoDB Connection
-mongoose
-	.connect(process.env.DATABASE_URL)
-	.then(() => console.log("MongoDB connected"))
-	.catch((err) => console.error("Database connection error:", err));
+// mongoose
+// 	.connect(process.env.DATABASE_URL)
+// 	.then(() => console.log("MongoDB connected"))
+// 	.catch((err) => console.error("Database connection error:", err));
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -645,41 +643,13 @@ app.get("/api/orders/user/:userId", async (req, res) => {
 	}
 });
 
+// Handle api errors
+app.use(errorHandler);
+
 // Start Server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 module.exports = app;
-
-// Track Shipment Endpoint
-// app.get('/api/track-shipment/:reference', async (req, res) => {
-//   const { reference } = req.params;
-
-//   try {
-//     const response = await axios.get(`${process.env.GOSHIIP_BASE_URL}/shipment/track/${reference}`, {
-//       headers: {
-//         'Authorization': `Bearer ${process.env.GOSHIIP_API_KEY}`,
-//       }
-//     });
-
-//     if (response.data.status) {
-//       res.json({
-//         status: true,
-//         data: response.data.data
-//       });
-//     } else {
-//       res.json({
-//         status: false,
-//         message: 'Could not fetch tracking data'
-//       });
-//     }
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({
-//       status: false,
-//       message: 'Internal server error'
-//     });
-//   }
-// });
 
 async () => {
 	await db.transaction.deleteMany({
