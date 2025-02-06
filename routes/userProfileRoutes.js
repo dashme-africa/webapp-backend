@@ -6,6 +6,9 @@ const streamifier = require("streamifier");
 const cloudinary = require("cloudinary").v2;
 const axios = require("axios");
 const db = require("../db");
+const { Middleware, Controller } = require("../middleware/handlers");
+const { ApiResponse, STATUS_CODE } = require("../middleware/response");
+const { AppError } = require("../middleware/exception");
 
 require("dotenv").config();
 
@@ -19,13 +22,20 @@ cloudinary.config({
 });
 
 // Example: Protected Profile Route
-router.get("/profile", protect, async (req, res) => {
-	// console.log(req.user)
-	res.json(req.user);
-});
+router.get(
+	"/profile",
+	Middleware(protect),
+	Controller(async (req, res) => {
+		// console.log(req.user)
+		return new ApiResponse(res, "", req.user);
+	})
+);
 
-router.put("/profile", protect, upload.single("image"), async (req, res) => {
-	try {
+router.put(
+	"/profile",
+	Middleware(protect),
+	Middleware(upload.single("image")),
+	Controller(async (req, res) => {
 		const {
 			fullName,
 			username,
@@ -43,9 +53,10 @@ router.put("/profile", protect, upload.single("image"), async (req, res) => {
 
 		// Validation for required fields
 		if (!fullName || !username) {
-			return res
-				.status(400)
-				.json({ message: "Please provide all required fields" });
+			throw new AppError(
+				"Please provide all required fields",
+				STATUS_CODE.BAD_REQUEST
+			);
 		}
 
 		let profilePicture;
@@ -70,9 +81,11 @@ router.put("/profile", protect, upload.single("image"), async (req, res) => {
 				profilePicture = result.secure_url; // Secure URL of the uploaded image.
 			} catch (error) {
 				console.error("Image upload failed:", error.message);
-				return res
-					.status(500)
-					.json({ message: "Image upload failed", error: error.message });
+				throw new AppError(
+					`Image upload failed: ${error.message}`,
+					STATUS_CODE.INTERNAL_SERVER_ERROR,
+					error
+				);
 			}
 		}
 
@@ -107,12 +120,9 @@ router.put("/profile", protect, upload.single("image"), async (req, res) => {
 		});
 
 		// Send updated user data as response
-		res.status(200).json(updatedUser);
-	} catch (error) {
-		console.error("Error updating profile:", error.message);
-		res.status(500).json({ message: "Internal server error" });
-	}
-});
+		return new ApiResponse(res, "", updatedUser);
+	})
+);
 
 // Fetch bank list and cache it
 let cachedBanks = [];
@@ -133,74 +143,80 @@ const fetchBanks = async () => {
 // Load bank list on server start
 fetchBanks();
 
-router.get("/banks", async (req, res) => {
-	try {
+router.get(
+	"/banks",
+	Controller(async (req, res) => {
 		// Ensure the bank list is available
 		if (!cachedBanks.length) {
 			console.error("Bank list not available, fetching...");
 			await fetchBanks(); // Refetch the bank list if empty
 		}
-		res.json(cachedBanks);
-	} catch (error) {
-		console.error("Error fetching bank list:", error.message);
-		res.status(500).json({ error: "Server error" });
-	}
-});
+
+		return new ApiResponse(res, "", cachedBanks);
+	})
+);
 
 // Endpoint to resolve account details
-router.get("/resolve-account", async (req, res) => {
-	const { account_number, bank_code } = req.query;
+router.get(
+	"/resolve-account",
+	Controller(async (req, res) => {
+		const { account_number, bank_code } = req.query;
 
-	// console.log(req.query);
+		// console.log(req.query);
 
-	if (!account_number || !bank_code) {
-		return res
-			.status(400)
-			.json({ error: "Account number and bank name are required" });
-	}
+		if (!account_number || !bank_code) {
+			throw new AppError(
+				"Account number and bank name are required",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	try {
-		// Ensure the bank list is available
-		// if (!cachedBanks.length) {
-		// 	console.error("Bank list not available, fetching...");
-		// 	await fetchBanks(); // Refetch the bank list if empty
-		// }
+		try {
+			// Ensure the bank list is available
+			// if (!cachedBanks.length) {
+			// 	console.error("Bank list not available, fetching...");
+			// 	await fetchBanks(); // Refetch the bank list if empty
+			// }
 
-		// // Find the bank code for the given bank name
-		// const bank = cachedBanks.find(
-		// 	(b) => b.name.toLowerCase() === bank_name.toLowerCase()
-		// );
+			// // Find the bank code for the given bank name
+			// const bank = cachedBanks.find(
+			// 	(b) => b.name.toLowerCase() === bank_name.toLowerCase()
+			// );
 
-		// if (!bank) {
-		// 	return res
-		// 		.status(404)
-		// 		.json({ error: "Bank not found. Please check the bank name." });
-		// }
+			// if (!bank) {
+			// 	return res
+			// 		.status(404)
+			// 		.json({ error: "Bank not found. Please check the bank name." });
+			// }
 
-		// const bank_code = bank.code;
+			// const bank_code = bank.code;
 
-		// Resolve the account number with the bank code
-		const response = await axios.get(
-			`https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}`,
-			{
-				headers: {
-					Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-				},
-			}
-		);
+			// Resolve the account number with the bank code
+			const response = await axios.get(
+				`https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}`,
+				{
+					headers: {
+						Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+					},
+				}
+			);
 
-		// console.log("Account resolved successfully:", response.data); // Debugging
-		res.json(response.data);
-	} catch (error) {
-		console.error(
-			"Error resolving account:",
-			error.message,
-			error.response?.data
-		); // Debugging
-		res
-			.status(error.response?.status || 500)
-			.json({ error: error.response?.data || "Server error" });
-	}
-});
+			// console.log("Account resolved successfully:", response.data); // Debugging
+			return new ApiResponse(res, "", response.data);
+		} catch (error) {
+			console.error(
+				"Error resolving account:",
+				error.message,
+				error.response?.data
+			); // Debugging
+
+			throw new AppError(
+				`Error resolving account: ${error.message}`,
+				error.response?.status || STATUS_CODE.INTERNAL_SERVER_ERROR,
+				error.response?.data
+			);
+		}
+	})
+);
 
 module.exports = router;

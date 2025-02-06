@@ -602,7 +602,7 @@ app.get(
 				return new ApiResponse(
 					res,
 					response.data.message,
-					null,
+					response.data,
 					response.data.status
 				);
 			}

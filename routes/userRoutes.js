@@ -6,6 +6,10 @@ const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const db = require("../db");
 const env = require("../env");
+const { Controller } = require("../middleware/handlers");
+const { AppError } = require("../middleware/exception");
+const { STATUS_CODE, ApiResponse } = require("../middleware/response");
+const { error } = require("console");
 
 require("dotenv").config();
 
@@ -17,46 +21,25 @@ const generateToken = (id) => {
 // User registration
 // @desc Register a new user
 // @route POST /api/users/register
-router.post("/register", async (req, res) => {
-	const { fullName, username, email, password, confirmPassword } = req.body;
-	// const captchaToken = req.body.captchaToken; // Define captchaToken variable
+router.post(
+	"/register",
+	Controller(async (req, res) => {
+		const { fullName, username, email, password, confirmPassword } = req.body;
 
-	// Validate reCAPTCHA
-	// try {
-	//   const verifyResponse = await axios.post(
-	//     `https://www.google.com/recaptcha/api/siteverify`,
-	//     null,
-	//     {
-	//       params: {
-	//         secret: "6LcNPqwqAAAAAAsOmBA8ZuKjnKT7aSRg3BIZ8eCd", // Secret key
-	//         response: captchaToken,
-	//       },
-	//     }
-	//   );
+		// Validate input
+		if (!fullName || !username || !email || !password || !confirmPassword) {
+			throw new AppError("Please provide all fields.", STATUS_CODE.BAD_REQUEST);
+		}
 
-	//   if (!verifyResponse.data.success) {
-	//     return res.status(400).json({ message: "Captcha verification failed." });
-	//   }
-	// } catch (error) {
-	//   console.error("Error verifying captcha:", error.message);
-	//   return res.status(500).json({ message: "Error in captcha verification." });
-	// }
+		if (password !== confirmPassword) {
+			throw new AppError("Passwords do not match.", STATUS_CODE.NOT_ACCEPTED);
+		}
 
-	// Validate input
-	if (!fullName || !username || !email || !password || !confirmPassword) {
-		return res.status(400).json({ message: "Please provide all fields." });
-	}
-
-	if (password !== confirmPassword) {
-		return res.status(400).json({ message: "Passwords do not match." });
-	}
-
-	try {
 		// Check if user already exists
 		const userExists = await db.user.findFirst({ where: { email } });
 
 		if (userExists) {
-			return res.status(400).json({ message: "Email already exists." });
+			throw new AppError("Email already exists.", STATUS_CODE.CONFLICT);
 		}
 		// return console.log(userExists);
 
@@ -65,66 +48,56 @@ router.post("/register", async (req, res) => {
 			data: { email, username, fullName, password },
 		});
 
-		// const newUser = new User({
-		// 	fullName,
-		// 	username,
-		// 	email,
-		// 	password,
-		// });
-
-		// // Save new user to the database
-		// await newUser.save();
-		// return console.log(newUser);
-
-		res.status(201).json({
-			success: true,
-			user: newUser,
-		});
-	} catch (error) {
-		console.error("Error during registration:", error.message);
-		res.status(500).json({ message: "Internal Server Error" });
-	}
-});
+		return new ApiResponse(
+			res,
+			"Registration successful",
+			newUser,
+			STATUS_CODE.CREATED
+		);
+	})
+);
 
 // @desc Authenticate user
 // @route POST /api/users/login
-router.post("/login", async (req, res) => {
-	const { email, password } = req.body;
+router.post(
+	"/login",
+	Controller(async (req, res) => {
+		const { email, password } = req.body;
 
-	if (!email || !password) {
-		return res
-			.status(400)
-			.json({ message: "Please provide email and password" });
-	}
+		if (!email || !password) {
+			throw new AppError(
+				"Please provide email and password",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
-	try {
 		const user = await db.user.findFirst({ where: { email } });
 
 		// Check if user exists and compare passwords
 		if (!user || !(await bcrypt.compare(password, user.password))) {
-			return res.status(401).json({ message: "Invalid email or password" });
+			throw new AppError("Invalid email or password", STATUS_CODE.UNAUTHORIZED);
 		}
 
-		// Return token if login is successful
-		res.json({
+		return new ApiResponse(res, "Login successful", {
 			_id: user.id,
 			fullName: user.fullName,
 			email: user.email,
 			token: generateToken(user.id),
 		});
-	} catch (error) {
-		res.status(500).json({ message: error.message });
-	}
-});
+	})
+);
 
 // @desc Logout user
 // @route POST /api/users/logout
 // @access Private
-router.post("/logout", (req, res) => {
-	// This is just to inform the user that they are logged out on the server side.
-	// No need to perform any action if you are using JWT as the token is stored client-side.
-	res.json({ message: "User logged out" });
-});
+router.post(
+	"/logout",
+	Controller((req, res) => {
+		// This is just to inform the user that they are logged out on the server side.
+		// No need to perform any action if you are using JWT as the token is stored client-side.
+		return new ApiResponse(res, "User logged out");
+	})
+);
 
 // Configure nodemailer transporter for sending emails
 const transporter = nodemailer.createTransport({
@@ -139,17 +112,17 @@ const transporter = nodemailer.createTransport({
 });
 
 // Forgot Password - Request reset link
-router.post("/forgot-password", async (req, res) => {
-	const { email } = req.body;
+router.post(
+	"/forgot-password",
+	Controller(async (req, res) => {
+		const { email } = req.body;
 
-	if (!email) {
-		return res
-			.status(400)
-			.json({ message: "Please provide an email address." });
-	}
-
-	try {
-		// Find user by email
+		if (!email) {
+			throw new AppError(
+				"Please provide an email address.",
+				STATUS_CODE.BAD_REQUEST
+			);
+		}
 
 		// Generate a reset token
 		const resetPasswordToken = crypto.randomBytes(20).toString("hex");
@@ -163,7 +136,7 @@ router.post("/forgot-password", async (req, res) => {
 		});
 
 		if (!user) {
-			return res.status(404).json({ message: "User not found." });
+			throw new AppError("User not found.", STATUS_CODE.NOT_FOUND);
 		}
 
 		// Send the reset email
@@ -175,33 +148,31 @@ router.post("/forgot-password", async (req, res) => {
 			subject: "Password Reset Request",
 			text: `To reset your password, click the following link: ${resetURL}`,
 		};
-		console.log(resetURL);
+		// console.log(resetURL);
 
 		transporter.sendMail(mailOptions, (err) => {
 			console.log("Error sending email", err);
 
 			if (err) {
-				return res.status(500).json({
-					message: "Error sending email. Please try again.",
-					details: err.message,
-				});
+				throw new AppError(
+					`Error sending email: ${error.message}`,
+					STATUS_CODE.GATEWAY_TIMEOUT,
+					error
+				);
 			}
-			res
-				.status(200)
-				.json({ message: "A reset link has been sent to your email address." });
+			return new ApiResponse(
+				res,
+				"A reset link has been sent to your email address."
+			);
 		});
-	} catch (error) {
-		console.error("Error in forgot password:", error.message);
-		res
-			.status(500)
-			.json({ message: "Internal Server Error", details: error.message });
-	}
-});
+	})
+);
 
-router.post("/reset-password", async (req, res) => {
-	const { token } = req.body;
+router.post(
+	"/reset-password",
+	Controller(async (req, res) => {
+		const { token } = req.body;
 
-	try {
 		// Find the user by token and ensure the token is not expired
 		const user = await db.user.findFirst({
 			where: {
@@ -213,7 +184,7 @@ router.post("/reset-password", async (req, res) => {
 		// });
 
 		if (!user || user.resetPasswordExpires.getMilliseconds() > Date.now()) {
-			return res.status(400).json({ message: "Invalid or expired token." });
+			throw new AppError("Invalid or expired token.", STATUS_CODE.UNAUTHORIZED);
 		}
 
 		// user.password = password;
@@ -228,20 +199,17 @@ router.post("/reset-password", async (req, res) => {
 			data: { resetPasswordExpires: null, resetPasswordToken: "" },
 		});
 
-		res.status(200).json({ message: "Password reset successful." });
-	} catch (error) {
-		console.error("Error in reset-password:", error.message);
-		res.status(500).json({ message: "Internal server error." });
-	}
-});
+		return new ApiResponse(res, "Password reset successful.");
+	})
+);
 
-router.get("/message-profile", async (req, res) => {
-	const username = req.query.username;
+router.get(
+	"/message-profile",
+	Controller(async (req, res) => {
+		const username = req.query.username;
 
-	if (!username)
-		return res.status(401).json({ ok: false, message: "User not found" });
+		if (!username) throw new AppError("User not found", STATUS_CODE.NOT_FOUND);
 
-	try {
 		const userProfile = await db.user.findFirst({ where: { username } });
 
 		// const products = await Product.find({ uploader: userProfile.id });
@@ -250,16 +218,10 @@ router.get("/message-profile", async (req, res) => {
 		});
 
 		if (!userProfile)
-			return res.status(401).json({ ok: false, message: "User not found" });
+			throw new AppError("User not found", STATUS_CODE.NOT_FOUND);
 
-		return res.status(200).json({
-			ok: true,
-			message: "Fetched",
-			data: { ...userProfile._doc, products },
-		});
-	} catch (error) {
-		res.status(500).json({ message: error.message });
-	}
-});
+		return new ApiResponse(res, "Fetched", { ...userProfile._doc, products });
+	})
+);
 
 module.exports = router;
