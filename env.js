@@ -8,6 +8,7 @@ const envSchema = z.object({
 	CLOUDINARY_CLOUD_NAME: z.string(),
 	CLOUDINARY_API_KEY: z.string(),
 	CLOUDINARY_API_SECRET: z.string(),
+	EMAIL_HOST: z.string(),
 	EMAIL_PASSWORD: z.string(),
 	EMAIL_USERNAME: z.string(),
 	PAYSTACK_SECRET_KEY: z.string(),

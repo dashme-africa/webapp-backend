@@ -3,7 +3,9 @@ const router = express.Router();
 const db = require("../db");
 const { Controller } = require("../middleware/handlers");
 const { STATUS_CODE, ApiResponse } = require("../middleware/response");
-const { AppError } = require("../middleware/exception");
+const { AppError, ValidationError } = require("../middleware/exception");
+const { APPROVED_PRODUCTS } = require("../utils");
+const { Validation } = require("../validation/inputs");
 const cloudinary = require("cloudinary").v2;
 
 require("dotenv").config();
@@ -25,12 +27,15 @@ router.get(
 			throw new AppError("Uploader ID is required", STATUS_CODE.BAD_REQUEST);
 		}
 
-		const myProducts = await db.product.findMany({ where: { uploader } });
+		const myProducts = await db.product.findMany({
+			where: { uploader, ...APPROVED_PRODUCTS },
+		});
 
 		if (!myProducts) {
-			return res
-				.status(404)
-				.json({ message: "No products found for this uploader" });
+			throw new AppError(
+				"No products found for this uploader",
+				STATUS_CODE.NOT_FOUND
+			);
 		}
 
 		return new ApiResponse(res, "Products retrieved successfully", myProducts);
@@ -45,11 +50,15 @@ router.put(
 			throw new AppError("Product ID is required", STATUS_CODE.BAD_REQUEST);
 
 		// ⚠️ TODO - Add validation for the request body
-		const updates = req.body;
+		const validate = Validation.editmyProduct.safeParse(req.body);
+
+		if (!validate.success) throw new ValidationError(validate.error);
+
+		const { data } = validate;
 
 		const updatedProduct = await db.product.update({
 			where: { id },
-			data: updates,
+			data,
 		});
 		if (!updatedProduct) {
 			throw new AppError("Product not found", STATUS_CODE.NOT_FOUND);

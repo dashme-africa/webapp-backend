@@ -10,12 +10,14 @@ const { Controller } = require("../middleware/handlers");
 const { AppError } = require("../middleware/exception");
 const { STATUS_CODE, ApiResponse } = require("../middleware/response");
 const { error } = require("console");
+const { sendEmail } = require("../middleware/email");
+const { hashPassword } = require("../utils");
 
 require("dotenv").config();
 
 // Generate a JWT
 const generateToken = (id) => {
-	return jwt.sign({ id }, process.env.TOKEN_SECRET_KEY, { expiresIn: "30d" });
+	return jwt.sign({ id }, env.TOKEN_SECRET_KEY, { expiresIn: "30d" });
 };
 
 // User registration
@@ -24,14 +26,20 @@ const generateToken = (id) => {
 router.post(
 	"/register",
 	Controller(async (req, res) => {
-		const { fullName, username, email, password, confirmPassword } = req.body;
+		const {
+			fullName,
+			username,
+			email,
+			password: raw,
+			confirmPassword,
+		} = req.body;
 
 		// Validate input
-		if (!fullName || !username || !email || !password || !confirmPassword) {
+		if (!fullName || !username || !email || !raw || !confirmPassword) {
 			throw new AppError("Please provide all fields.", STATUS_CODE.BAD_REQUEST);
 		}
 
-		if (password !== confirmPassword) {
+		if (raw !== confirmPassword) {
 			throw new AppError("Passwords do not match.", STATUS_CODE.NOT_ACCEPTED);
 		}
 
@@ -41,17 +49,20 @@ router.post(
 		if (userExists) {
 			throw new AppError("Email already exists.", STATUS_CODE.CONFLICT);
 		}
-		// return console.log(userExists);
+
+		const password = await hashPassword(raw);
+
+		console.log({ email, username, fullName, password });
 
 		// Create new user
-		const newUser = await db.user.create({
+		await db.user.create({
 			data: { email, username, fullName, password },
 		});
 
 		return new ApiResponse(
 			res,
 			"Registration successful",
-			newUser,
+			{},
 			STATUS_CODE.CREATED
 		);
 	})
@@ -93,8 +104,6 @@ router.post(
 router.post(
 	"/logout",
 	Controller((req, res) => {
-		// This is just to inform the user that they are logged out on the server side.
-		// No need to perform any action if you are using JWT as the token is stored client-side.
 		return new ApiResponse(res, "User logged out");
 	})
 );
@@ -127,9 +136,7 @@ router.post(
 		// Generate a reset token
 		const resetPasswordToken = crypto.randomBytes(20).toString("hex");
 		const resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour from now
-		// Save token and expiration to user
-		// user.resetPasswordToken = resetToken;
-		// user.resetPasswordExpires = resetTokenExpiration;
+
 		const user = await db.user.update({
 			where: { email },
 			data: { resetPasswordExpires, resetPasswordToken },
@@ -142,36 +149,35 @@ router.post(
 		// Send the reset email
 		const resetURL = `${env.FRONTEND_URL_PRODUCTION}/reset-password?token=${resetPasswordToken}`;
 
-		const mailOptions = {
-			from: env.EMAIL_USERNAME,
-			to: user.email,
-			subject: "Password Reset Request",
-			text: `To reset your password, click the following link: ${resetURL}`,
-		};
+		const emailRes = await sendEmail(
+			user.email,
+			`To reset your password, click the following link: ${resetURL}`,
+			"Password Reset Request"
+		);
+
+		if (!emailRes.success)
+			throw new AppError(
+				`Error while sending email: ${emailRes.message}`,
+				STATUS_CODE.GATEWAY_TIMEOUT,
+				emailRes.details
+			);
+
 		// console.log(resetURL);
 
-		transporter.sendMail(mailOptions, (err) => {
-			console.log("Error sending email", err);
-
-			if (err) {
-				throw new AppError(
-					`Error sending email: ${error.message}`,
-					STATUS_CODE.GATEWAY_TIMEOUT,
-					error
-				);
-			}
-			return new ApiResponse(
-				res,
-				"A reset link has been sent to your email address."
-			);
-		});
+		return new ApiResponse(
+			res,
+			"A reset link has been sent to your email address."
+		);
 	})
 );
 
 router.post(
 	"/reset-password",
 	Controller(async (req, res) => {
-		const { token } = req.body;
+		const { token, password: raw } = req.body;
+
+		if (!raw)
+			throw new AppError("Provide a new password", STATUS_CODE.BAD_REQUEST);
 
 		// Find the user by token and ensure the token is not expired
 		const user = await db.user.findFirst({
@@ -179,24 +185,16 @@ router.post(
 				resetPasswordToken: token,
 			},
 		});
-		// 	resetPasswordToken: token,
-		// 	resetPasswordExpires: { $gt: Date.now() }, // Ensure the token has not expired
-		// });
 
 		if (!user || user.resetPasswordExpires.getMilliseconds() > Date.now()) {
 			throw new AppError("Invalid or expired token.", STATUS_CODE.UNAUTHORIZED);
 		}
 
-		// user.password = password;
-
-		// // Clear the reset token and expiration fields
-		// user.resetPasswordToken = undefined;
-		// user.resetPasswordExpires = undefined;
-
+		const password = await hashPassword(raw);
 		// // Save the updated user
 		await db.user.update({
 			where: { id: user.id },
-			data: { resetPasswordExpires: null, resetPasswordToken: "" },
+			data: { resetPasswordExpires: null, resetPasswordToken: "", password },
 		});
 
 		return new ApiResponse(res, "Password reset successful.");

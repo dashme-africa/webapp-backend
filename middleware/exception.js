@@ -70,7 +70,7 @@ const errorHandler = (error, req, res, next) => {
 	if (error instanceof PrismaClientKnownRequestError && error.code == "P2025")
 		return new ErrorResponse(
 			res,
-			`${(error.meta?.cause).split(" ")[1]} not found`,
+			`${error.meta.modelName} not found`,
 			error,
 			STATUS_CODE.NOT_FOUND
 		);

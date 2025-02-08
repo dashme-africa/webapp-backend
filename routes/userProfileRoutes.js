@@ -9,6 +9,7 @@ const db = require("../db");
 const { Middleware, Controller } = require("../middleware/handlers");
 const { ApiResponse, STATUS_CODE } = require("../middleware/response");
 const { AppError } = require("../middleware/exception");
+const { APPROVED_PRODUCTS } = require("../utils");
 
 require("dotenv").config();
 
@@ -27,7 +28,15 @@ router.get(
 	Middleware(protect),
 	Controller(async (req, res) => {
 		// console.log(req.user)
-		return new ApiResponse(res, "", req.user);
+		const me = await db.user.findUnique({
+			where: { id: req.user.id },
+			include: {
+				products: {},
+				order: {},
+				notification: {},
+			},
+		});
+		return new ApiResponse(res, "", me);
 	})
 );
 
@@ -38,7 +47,7 @@ router.put(
 	Controller(async (req, res) => {
 		const {
 			fullName,
-			username,
+			// username,
 			phoneNumber,
 			city,
 			state,
@@ -52,7 +61,7 @@ router.put(
 		// console.log(req.body);
 
 		// Validation for required fields
-		if (!fullName || !username) {
+		if (!fullName) {
 			throw new AppError(
 				"Please provide all required fields",
 				STATUS_CODE.BAD_REQUEST
@@ -92,7 +101,7 @@ router.put(
 		// Prepare the data to update
 		const data = {
 			fullName,
-			username,
+			// username,
 			// email,
 			bio,
 			city,
@@ -120,7 +129,7 @@ router.put(
 		});
 
 		// Send updated user data as response
-		return new ApiResponse(res, "", updatedUser);
+		return new ApiResponse(res, "Profile updated successfully", updatedUser);
 	})
 );
 
@@ -202,7 +211,14 @@ router.get(
 			);
 
 			// console.log("Account resolved successfully:", response.data); // Debugging
-			return new ApiResponse(res, "", response.data);
+			if (!response.data.status)
+				throw new AppError(
+					response.data.message,
+					STATUS_CODE.NOT_ACCEPTED,
+					response.data
+				);
+
+			return new ApiResponse(res, "Bank details verified", response.data);
 		} catch (error) {
 			console.error(
 				"Error resolving account:",

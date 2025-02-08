@@ -6,6 +6,7 @@ const db = require("../db");
 const { Controller } = require("../middleware/handlers");
 const { STATUS_CODE, ApiResponse } = require("../middleware/response");
 const { AppError } = require("../middleware/exception");
+const { generateTrxRef } = require("../utils");
 
 require("dotenv").config();
 
@@ -170,8 +171,8 @@ router.post(
 			subaccount,
 			transaction_charge,
 			redis_key,
-			rate_id,
-			rate_amount,
+			// rate_id,
+			// rate_amount,
 			product_id,
 			quantity,
 			product_amount,
@@ -179,24 +180,26 @@ router.post(
 			user_id,
 		} = req.body;
 
-		try {
-			// Ensure all required fields are provided
-			if (!email || !amount || !subaccount || !redis_key || !rate_id) {
-				throw new AppError(
-					"Required fields are missing",
-					STATUS_CODE.BAD_REQUEST
-				);
-			}
+		// Ensure all required fields are provided
+		if (!email || !amount || !subaccount) {
+			throw new AppError(
+				"Required fields are missing",
+				STATUS_CODE.BAD_REQUEST,
+				{ email, amount, subaccount }
+			);
+		}
 
+		try {
 			const order = await db.order.create({
 				data: {
 					buyerEmail: email,
 					amount,
 					subaccount,
+					transactionReference: generateTrxRef("DMA"),
 					transactionCharge: transaction_charge,
-					redisKey: redis_key,
-					rateId: rate_id,
-					rateAmount: rate_amount,
+					// redisKey: redis_key,
+					// rateId: rate_id,
+					// rateAmount: rate_amount,
 					productId: product_id,
 					quantity,
 					productAmount: product_amount,
@@ -216,9 +219,9 @@ router.post(
 					bearer: "subaccount", // Ensures seller bears the transaction charge
 					callback_url: `${process.env.FRONTEND_URL_PRODUCTION}/confirmationPage`, // Redirect URL after payment completion
 					metadata: {
-						redis_key, // Store redis_key in metadata
-						rate_id, // Store rate_id in metadata
-						rate_amount,
+						// redis_key, // Store redis_key in metadata
+						// rate_id, // Store rate_id in metadata
+						// rate_amount,
 						order_id: order.id, // Store order ID in metadata
 					},
 				},
@@ -231,7 +234,7 @@ router.post(
 			);
 
 			// console.log("initi", response.data);
-			return new ApiResponse(res, "", response.data);
+			return new ApiResponse(res, "Transaction initialised", response.data);
 		} catch (error) {
 			console.error(
 				"Error initializing transaction:",

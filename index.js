@@ -513,13 +513,6 @@ app.get(
 			orderBy: { paidAt: "desc" },
 		});
 
-		if (!transactions.length) {
-			throw new AppError(
-				"No transactions found for this user",
-				STATUS_CODE.NOT_FOUND
-			);
-		}
-
 		return new ApiResponse(
 			res,
 			"Transactions retrieved successfully",

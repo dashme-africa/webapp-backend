@@ -9,10 +9,10 @@ datasource db {
 
 model AdminNotification {
   id        String   @id @default(cuid())
-  v         Int?     @default(0) 
+  v         Int?     @default(0)
   createdAt DateTime @default(now())
   message   String
-  productId String   
+  productId String
   product   Product  @relation(fields: [productId], references: [id])
   read      Boolean
   type      String
@@ -20,34 +20,34 @@ model AdminNotification {
 
 model Admin {
   id       String @id @default(cuid())
-  v        Int?   @default(0) 
+  v        Int?   @default(0)
   email    String @unique
   password String
 }
 
 model Notification {
   id        String   @id @default(cuid())
-  v         Int?     @default(0) 
+  v         Int?     @default(0)
   message   String
   read      Boolean
-  userId    String   
+  userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
 }
 
 model Order {
   id                   String        @id @default(cuid())
-  v                    Int?          @default(0) 
+  v                    Int?          @default(0)
   amount               Int
   buyerEmail           String
   createdAt            DateTime      @default(now())
   productAmount        Int
-  productId            String        
+  productId            String
   product              Product       @relation(fields: [productId], references: [id])
   quantity             Int
-  rateAmount           Int
-  rateId               String
-  redisKey             String
+  rateAmount           Int?
+  rateId               String?
+  redisKey             String?
   sellerId             String
   shipmentReference    String?
   subaccount           String
@@ -55,14 +55,14 @@ model Order {
   transactionReference String //@unique
   // transaction          Transaction?
   updatedAt            DateTime      @updatedAt
-  userId               String        
+  userId               String
   user                 User          @relation(fields: [userId], references: [id])
   Transaction          Transaction[]
 }
 
 model Product {
   id                String              @id @default(cuid())
-  v                 Int?                @default(0) 
+  v                 Int?                @default(0)
   availability      Boolean
   category          String
   condition         String
@@ -78,7 +78,7 @@ model Product {
   tag               String
   title             String
   updatedAt         DateTime            @updatedAt
-  uploader          String              
+  uploader          String
   user              User?               @relation(fields: [uploader], references: [id])
   videoUrl          String?
   adminNotification AdminNotification[]
@@ -87,14 +87,14 @@ model Product {
 
 model Transaction {
   id              String   @id @default(cuid())
-  v               Int?     @default(0) 
+  v               Int?     @default(0)
   amount          Int
   createdAt       DateTime @default(now())
   currency        String
   customerEmail   String
   gatewayResponse String
   order           Order?   @relation(fields: [orderId], references: [id])
-  orderId         String?  
+  orderId         String?
   paidAt          DateTime
   paymentMethod   String
   reference       String //@unique
@@ -105,7 +105,7 @@ model Transaction {
 
 model User {
   id                   String         @id @default(cuid())
-  v                    Int?           @default(0) 
+  v                    Int?           @default(0)
   accountName          String?
   accountNumber        String?
   bankName             String?
@@ -123,7 +123,7 @@ model User {
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
   products             Product[]
-  Notification         Notification[]
+  notification         Notification[]
   order                Order[]
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt

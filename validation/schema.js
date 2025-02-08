@@ -60,7 +60,11 @@ module.exports.getOptionalStringValidation = (key) =>
 
 /** @type {(key:string)=> z.ZodString} */
 module.exports.getNumberValidation = (key) =>
-	z.number({
-		required_error: `'${key}' is required`,
-		invalid_type_error: `'${key}' must be a number`,
-	});
+	z
+		.number({
+			required_error: `'${key}' is required`,
+			invalid_type_error: `'${key}' must be a number`,
+		})
+		.min(1, {
+			message: `'${key}' must be greater than 1`,
+		});

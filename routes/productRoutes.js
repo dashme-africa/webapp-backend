@@ -6,6 +6,7 @@ const { Controller } = require("../middleware/handlers");
 const { AppError } = require("../middleware/exception");
 const { STATUS_CODE, ApiResponse } = require("../middleware/response");
 const { profile } = require("console");
+const { APPROVED_PRODUCTS } = require("../utils");
 
 require("dotenv").config();
 
@@ -22,16 +23,17 @@ router.get(
 	Controller(async (req, res) => {
 		// console.log(req.query); // Optional: for debugging purposes
 		const { category } = req.query; // Get the category from the query parameters
-		if (!category)
-			throw new AppError("Category is required", STATUS_CODE.BAD_REQUEST);
+		// if (!category)
+		// 	throw new AppError("Category is required", STATUS_CODE.BAD_REQUEST);
 
 		const where = category ? { category: category } : {}; // If category exists, filter by it, else get all products
 
 		// Fetch the products based on the query
 		// const products = await Product.find(query).populate('uploader', 'username email');
 		const products = await db.product.findMany({
-			where,
-			include: { user: {} },
+			where: { AND: [where, APPROVED_PRODUCTS] },
+			include: { user: { omit: { password: true } } },
+			orderBy: { createdAt: "desc" },
 		});
 
 		return new ApiResponse(res, "", products);
@@ -44,13 +46,18 @@ router.get(
 	Controller(async (req, res) => {
 		const product = await db.product.findFirst({
 			where: { id: req.params.id },
-			include: { user: true },
+			include: { user: { omit: { password: true } } },
 		});
 
 		if (!product) {
 			throw new AppError("Product not found", STATUS_CODE.NOT_FOUND);
 		}
-		return new ApiResponse(res, "", product);
+
+		const relatedProducts = await db.product.findMany({
+			where: { uploader: product.uploader, ...APPROVED_PRODUCTS },
+		});
+
+		return new ApiResponse(res, "", { ...product, relatedProducts });
 	})
 );
 
@@ -194,7 +201,12 @@ router.post(
 				read: false,
 			},
 		});
-		throw new ApiResponse(res, "", createdProduct, STATUS_CODE.CREATED);
+		return new ApiResponse(
+			res,
+			"Product has been created and is awaiting approval",
+			createdProduct,
+			STATUS_CODE.CREATED
+		);
 	})
 );
 

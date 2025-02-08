@@ -28,7 +28,9 @@ router.get(
 	Middleware(protectAdmin),
 	Controller(async (req, res) => {
 		// const products = await Product.find({}).populate('uploader', 'username email phoneNumber');
-		const products = await db.product.findMany({ include: { user: {} } });
+		const products = await db.product.findMany({
+			include: { user: { omit: { password: true } } },
+		});
 
 		return new ApiResponse(res, "Products fetched successfully", products);
 	})
@@ -38,7 +40,7 @@ router.get(
 router.get("/:id", Middleware(protectAdmin), async (req, res) => {
 	const product = await db.product.findUnique({
 		where: { id: req.params.id },
-		include: { user: {} },
+		include: { user: { omit: { password: true } } },
 	});
 	if (!product) {
 		throw new AppError("Product not found", STATUS_CODE.NOT_FOUND);
