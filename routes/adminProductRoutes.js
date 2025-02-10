@@ -54,12 +54,17 @@ router.delete(
 	"/:id",
 	Middleware(protectAdmin),
 	Controller(async (req, res) => {
-		const product = await db.product.delete({ where: { id: req.params.id } });
+		const product = await db.product.delete({
+			where: { id: req.params.id },
+		});
+
 		if (!product) {
 			throw new AppError("Product not found", STATUS_CODE.NOT_FOUND);
 		}
 
-		return new ApiResponse(res, "Product deleted successfully");
+		return new ApiResponse(res, "Product deleted successfully", {
+			id: product.id,
+		});
 	})
 );
 

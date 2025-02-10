@@ -44,8 +44,7 @@ router.post(
 		});
 
 		return new ApiResponse(res, "Admin logged in successfully", {
-			_id: admin.id,
-			email: admin.email,
+			admin,
 			token,
 		});
 	})
