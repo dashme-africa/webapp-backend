@@ -29,7 +29,7 @@ router.post(
 
 		const admin = await db.admin.findUnique({ where: { email } });
 
-		console.dir(admin, { depth: 5 });
+		// console.dir(admin, { depth: 5 });
 
 		if (!admin || !(await bcrypt.compare(password, admin.password))) {
 			throw new AppError("Invalid email or password", STATUS_CODE.UNAUTHORIZED);

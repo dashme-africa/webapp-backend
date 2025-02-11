@@ -20,6 +20,7 @@ const db = require("./db");
 const { errorHandler, AppError } = require("./middleware/exception");
 const { Controller, Middleware } = require("./middleware/handlers");
 const { STATUS_CODE, ApiResponse } = require("./middleware/response");
+const { generateTrxRef } = require("./utils");
 
 dotenv.config();
 
@@ -270,47 +271,69 @@ app.get(
 			// console.log("Transaction verification response:", response.data);
 
 			// Ensure the transaction was successful
-			if (response.data.data.status === "success") {
-				const transactionData = response.data.data;
-				// console.log("Transaction data:", transactionData);
+			if (response.data.data.status !== "success") {
+				console.log(
+					"Transaction verification failed:",
+					response.data.data.status
+				);
+				throw new AppError(
+					"Transaction verification failed",
+					STATUS_CODE.BAD_REQUEST
+				);
+			}
 
-				const { redis_key, rate_id, order_id } = transactionData.metadata;
-				// Create and save the transaction
-				const newTransaction = {
-					transactionId: transactionData.id,
-					reference: transactionData.reference,
-					amount: transactionData.amount,
-					orderId: order_id,
-					currency: transactionData.currency,
-					status: transactionData.status,
-					customerEmail: transactionData.customer.email,
-					paymentMethod: transactionData.channel,
-					paidAt: transactionData.paid_at,
-					gatewayResponse: transactionData.gateway_response,
-				};
-				try {
-					// await newTransaction.save();
-					await db.transaction.create({ data: newTransaction });
-					// Update the Order with the transactionId
-					// await Order.findOneAndUpdate(
-					// 	{ _id: order_id },
-					// 	{ $set: { transactionReference: transactionData.reference } },
-					// 	{ new: true }
-					// );
-					await db.order.update({
-						where: { id: order_id },
-						data: { transactionReference: transactionData.reference },
-					});
-					// console.log("Order updated with transactionId");
-				} catch (error) {
-					console.error(
-						"Error saving transaction and updating order with transactionId:",
-						error
-					);
+			const transactionData = response.data.data;
+			// console.log("Transaction data:", transactionData);
+
+			const { redis_key, rate_id, order_id } = transactionData.metadata;
+			// Create and save the transaction
+			const newTransaction = {
+				transactionId: transactionData.id + "",
+				reference: transactionData.reference,
+				amount: transactionData.amount,
+				orderId: order_id,
+				currency: transactionData.currency,
+				status: transactionData.status,
+				customerEmail: transactionData.customer.email,
+				paymentMethod: transactionData.channel,
+				paidAt: transactionData.paid_at,
+				gatewayResponse: transactionData.gateway_response,
+			};
+			// await newTransaction.save();
+			const tx = await db.transaction.create({
+				data: { ...newTransaction, reference: generateTrxRef("DMA") },
+			});
+
+			if (!tx)
+				throw new AppError("Error creating transaction", STATUS_CODE.NOT_FOUND);
+
+			const order_ = await db.order.update({
+				where: { id: order_id },
+				data: { transactionReference: tx.reference },
+			});
+
+			// console.log(tx);
+			// console.log(order_);
+
+			return new ApiResponse(
+				res,
+				"Payment verified, shipment booked, and assignment successful.",
+				{
+					transactionDetails: {
+						amount: transactionData.amount,
+						status: transactionData.status,
+						paymentMethod: transactionData.channel,
+						currency: transactionData.currency,
+						paidAt: transactionData.paid_at,
+						// shipmentId, // Return shipmentId instead of shipmentReference
+					},
+					// bookingStatus: bookingResponse.data.message,
+					// assignStatus: assignResponse.data.message,
 				}
+			);
 
-				// Prepare the booking payload
-				const bookingPayload = {
+			// Prepare the booking payload
+			/* 	const bookingPayload = {
 					redis_key,
 					rate_id,
 					user_id: process.env.GOSHIP_USER_ID,
@@ -325,15 +348,15 @@ app.get(
 				try {
 					// Make the booking API request
 					// console.log("Sending booking request...");
-					bookingResponse = await axios.post(
-						`${process.env.GOSHIIP_BASE_URL}/bookshipment`,
-						bookingPayload,
-						{
-							headers: {
-								Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
-							},
-						}
-					);
+					// bookingResponse = await axios.post(
+					// 	`${process.env.GOSHIIP_BASE_URL}/bookshipment`,
+					// 	bookingPayload,
+					// 	{
+					// 		headers: {
+					// 			Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
+					// 		},
+					// 	}
+					// );
 
 					// console.log("Booking response:", bookingResponse.data);
 
@@ -343,19 +366,19 @@ app.get(
 						const shipmentReference = bookingResponse.data.data.reference;
 						// console.log(`Booking successful. Shipment ID: ${shipmentReference}`);
 
-						try {
-							// Update the Order with the shipmentId
-							await db.order.update({
-								where: { id: order_id },
-								data: { shipmentReference },
-							});
-							// console.log("Order updated with shipmentReference");
-						} catch (error) {
-							console.error(
-								"Error updating order with shipmentReference:",
-								error
-							);
-						}
+						// try {
+						// 	// Update the Order with the shipmentId
+						// 	await db.order.update({
+						// 		where: { id: order_id },
+						// 		data: { shipmentReference },
+						// 	});
+						// 	// console.log("Order updated with shipmentReference");
+						// } catch (error) {
+						// 	console.error(
+						// 		"Error updating order with shipmentReference:",
+						// 		error
+						// 	);
+						// }
 
 						try {
 							// Trigger the Assign API with shipment_id in the body
@@ -364,15 +387,15 @@ app.get(
 								shipment_id: shipmentId,
 							};
 
-							const assignResponse = await axios.post(
-								`${process.env.GOSHIIP_BASE_URL}/shipment/assign`,
-								assignPayload,
-								{
-									headers: {
-										Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
-									},
-								}
-							);
+							// const assignResponse = await axios.post(
+							// 	`${process.env.GOSHIIP_BASE_URL}/shipment/assign`,
+							// 	assignPayload,
+							// 	{
+							// 		headers: {
+							// 			Authorization: `Bearer ${process.env.GOSHIIP_API_KEY}`,
+							// 		},
+							// 	}
+							// );
 
 							// console.log("Assign response:", assignResponse.data);
 
@@ -436,17 +459,7 @@ app.get(
 						STATUS_CODE.INTERNAL_SERVER_ERROR,
 						error
 					);
-				}
-			} else {
-				console.log(
-					"Transaction verification failed:",
-					response.data.data.status
-				);
-				throw new AppError(
-					"Transaction verification failed",
-					STATUS_CODE.BAD_REQUEST
-				);
-			}
+				} */
 		} catch (err) {
 			console.error("Error verifying transaction:", err.message);
 			throw new AppError(
@@ -512,6 +525,7 @@ app.get(
 			where: { customerEmail },
 			orderBy: { paidAt: "desc" },
 		});
+		// console.log(transactions);
 
 		return new ApiResponse(
 			res,

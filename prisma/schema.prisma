@@ -92,6 +92,7 @@ model Transaction {
   createdAt       DateTime @default(now())
   currency        String
   customerEmail   String
+  user            User     @relation(fields: [customerEmail], references: [email])
   gatewayResponse String
   order           Order?   @relation(fields: [orderId], references: [id])
   orderId         String?
@@ -127,4 +128,5 @@ model User {
   order                Order[]
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
+  transaction          Transaction[]
 }

@@ -7,6 +7,7 @@ const { Controller } = require("../middleware/handlers");
 const { STATUS_CODE, ApiResponse } = require("../middleware/response");
 const { AppError } = require("../middleware/exception");
 const { generateTrxRef } = require("../utils");
+const env = require("../env");
 
 require("dotenv").config();
 
@@ -18,7 +19,7 @@ const fetchBanks = async () => {
 	try {
 		const response = await axios.get("https://api.paystack.co/bank", {
 			headers: {
-				Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+				Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
 			},
 		});
 		cachedBanks = response.data.data || []; // Cache the bank list
@@ -133,13 +134,13 @@ router.post(
 				},
 				{
 					headers: {
-						Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+						Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
 						"Content-Type": "application/json",
 					},
 				}
 			);
 
-			console.log(response.data);
+			// console.log(response.data);
 			return new ApiResponse(
 				res,
 				"Subaccount created successfully",
@@ -217,7 +218,7 @@ router.post(
 					subaccount: subaccount, // Seller's Paystack subaccount
 					transaction_charge, // Platform's 10% charge
 					bearer: "subaccount", // Ensures seller bears the transaction charge
-					callback_url: `${process.env.FRONTEND_URL_PRODUCTION}/confirmationPage`, // Redirect URL after payment completion
+					callback_url: `${env.FRONTEND_URL_PRODUCTION}/confirmationPage`, // Redirect URL after payment completion
 					metadata: {
 						// redis_key, // Store redis_key in metadata
 						// rate_id, // Store rate_id in metadata
@@ -227,7 +228,7 @@ router.post(
 				},
 				{
 					headers: {
-						Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+						Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
 						"Content-Type": "application/json",
 					},
 				}
