@@ -526,7 +526,6 @@ app.get(
 			orderBy: { paidAt: "desc" },
 		});
 		// console.log(transactions);
-
 		return new ApiResponse(
 			res,
 			"Transactions retrieved successfully",
