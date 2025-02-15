@@ -311,7 +311,7 @@ router.post(
 			images: imagesArray,
 			primaryImage: imagesArray[primaryImageIndex],
 			location,
-			uploader,
+			// uploader,
 			tag: "Donate",
 			availability: true,
 			status: "pending",
