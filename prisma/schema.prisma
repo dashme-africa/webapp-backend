@@ -13,7 +13,6 @@ model AdminNotification {
   createdAt DateTime @default(now())
   message   String
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: NoAction)
   read      Boolean
   type      String
 }
@@ -43,7 +42,7 @@ model Order {
   createdAt            DateTime      @default(now())
   productAmount        Int
   productId            String
-  product              Product       @relation(fields: [productId], references: [id])
+  product              Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity             Int
   rateAmount           Int?
   rateId               String?
@@ -53,7 +52,6 @@ model Order {
   subaccount           String
   transactionCharge    Int
   transactionReference String //@unique
-  // transaction          Transaction?
   updatedAt            DateTime      @updatedAt
   userId               String
   user                 User          @relation(fields: [userId], references: [id])
@@ -61,28 +59,27 @@ model Order {
 }
 
 model Product {
-  id                String              @id @default(cuid())
-  v                 Int?                @default(0)
-  availability      Boolean
-  category          String
-  condition         String
-  createdAt         DateTime            @default(now())
-  description       String
-  images            String[]
-  location          String
-  price             Int                 @default(0)
-  priceCategory     String?
-  primaryImage      String
-  specification     String
-  status            String
-  tag               String
-  title             String
-  updatedAt         DateTime            @updatedAt
-  uploader          String
-  user              User?               @relation(fields: [uploader], references: [id])
-  videoUrl          String?
-  adminNotification AdminNotification[]
-  order             Order[]
+  id            String   @id @default(cuid())
+  v             Int?     @default(0)
+  availability  Boolean
+  category      String
+  condition     String
+  createdAt     DateTime @default(now())
+  description   String
+  images        String[]
+  location      String
+  price         Int      @default(0)
+  priceCategory String?
+  primaryImage  String
+  specification String
+  status        String
+  tag           String
+  title         String
+  updatedAt     DateTime @updatedAt
+  uploader      String
+  user          User?    @relation(fields: [uploader], references: [id])
+  videoUrl      String?
+  order         Order[]
 }
 
 model Transaction {
