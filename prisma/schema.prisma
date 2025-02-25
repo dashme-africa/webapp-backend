@@ -110,6 +110,7 @@ model User {
   bio                  String?
   city                 String?
   country              String?
+  street               String?
   email                String         @unique
   fullName             String
   isVerified           Boolean        @default(false)

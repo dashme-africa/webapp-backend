@@ -144,6 +144,7 @@ router.post(
 			!user.city ||
 			!user.state ||
 			!user.country ||
+			!user.street ||
 			!user.bio ||
 			!user.phoneNumber
 		) {
@@ -288,6 +289,7 @@ router.post(
 			!user.city ||
 			!user.state ||
 			!user.country ||
+			!user.street ||
 			!user.bio ||
 			!user.phoneNumber
 		) {

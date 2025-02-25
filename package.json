@@ -6,7 +6,7 @@
 		"db:sync": "prisma db push",
 		"db:view": "prisma studio",
 		"postinstall": "prisma generate",
-		"start": "nodemon index.js"
+		"start": "node index.js"
 	},
 	"keywords": [],
 	"author": "",
