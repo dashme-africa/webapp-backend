@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/dashucmp/api.dashmeafrica.com
+    - /bin/cp -R images $DEPLOYPATH

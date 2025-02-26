@@ -7,7 +7,8 @@ const { ApiResponse, STATUS_CODE } = require("../middleware/response");
 const { AppError, ValidationError } = require("../middleware/exception");
 const env = require("../env");
 const { Validation } = require("../validation/inputs");
-const { Controller } = require("../middleware/handlers");
+const { Controller, Middleware } = require("../middleware/handlers");
+const { protectAdmin } = require("../middleware/adminMiddleware");
 
 require("dotenv").config();
 
@@ -47,6 +48,23 @@ router.post(
 			admin,
 			token,
 		});
+	})
+);
+
+router.get(
+	"/all-transactions",
+	Middleware(protectAdmin),
+	Controller(async (req, res) => {
+		const transactions = await db.transaction.findMany({
+			orderBy: { createdAt: "desc" },
+			include: { user: {}, order: {} },
+		});
+		// console.log(transactions);
+		return new ApiResponse(
+			res,
+			"Transactions retrieved successfully",
+			transactions
+		);
 	})
 );
 
