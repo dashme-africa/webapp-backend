@@ -345,7 +345,7 @@ router.post(
 				read: false,
 			},
 		});
-		return new ApiResponse(res, "", createdProduct);
+		return new ApiResponse(res, "Product has been created and is awaiting approval", createdProduct);
 	})
 );
 
