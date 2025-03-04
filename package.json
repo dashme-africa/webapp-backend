@@ -13,7 +13,7 @@
 	"license": "ISC",
 	"description": "",
 	"dependencies": {
-		"@prisma/client": "^6.2.1",
+		"@prisma/client": "^6.4.1",
 		"axios": "^1.7.9",
 		"bcryptjs": "^2.4.3",
 		"cloudinary": "^2.5.1",
@@ -33,6 +33,6 @@
 		"@prisma/studio": "^0.504.0",
 		"eslint": "^9.19.0",
 		"globals": "^15.14.0",
-		"prisma": "^6.2.1"
+		"prisma": "^6.4.1"
 	}
 }
