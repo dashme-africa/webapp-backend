@@ -6,12 +6,13 @@ const nodemailer = require("nodemailer");
 const crypto = require("node:crypto");
 const db = require("../db");
 const env = require("../env");
-const { Controller } = require("../middleware/handlers");
+const { Controller, Middleware } = require("../middleware/handlers");
 const { AppError } = require("../middleware/exception");
 const { STATUS_CODE, ApiResponse } = require("../middleware/response");
 const { error } = require("console");
 const { sendEmail } = require("../middleware/email");
 const { hashPassword } = require("../utils");
+const { protect } = require("../middleware/authMiddleware");
 
 require("dotenv").config();
 
@@ -32,6 +33,7 @@ router.post(
 			email,
 			password: raw,
 			confirmPassword,
+			referredBy = "",
 		} = req.body;
 
 		// Validate input
@@ -52,11 +54,18 @@ router.post(
 
 		const password = await hashPassword(raw);
 
-		console.log({ email, username, fullName, password });
-
+		// console.log({ email, username, fullName, password });
+		const refID = generateReferralId();
 		// Create new user
 		await db.user.create({
-			data: { email, username, fullName, password },
+			data: {
+				email,
+				username,
+				fullName,
+				password,
+				referredBy,
+				refID,
+			},
 		});
 
 		return new ApiResponse(
@@ -222,4 +231,30 @@ router.get(
 	})
 );
 
+router.get(
+	"/generate-refID",
+	Middleware(protect),
+	Controller(async (req, res) => {
+		if (!req.user) {
+			throw new AppError("Unauthorized", STATUS_CODE.UNAUTHORIZED);
+		}
+		const id = req.user.id;
+
+		const refID = generateReferralId();
+
+		const user = await db.user.update({ where: { id }, data: { refID } });
+
+		return new ApiResponse(res, "Referral link generated", user.refID);
+	})
+);
+
 module.exports = router;
+
+function generateReferralId(length = 8) {
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	let referralId = "";
+	for (let i = 0; i < length; i++) {
+		referralId += chars.charAt(Math.floor(Math.random() * chars.length));
+	}
+	return referralId;
+}

@@ -36,7 +36,13 @@ router.get(
 				notification: {},
 			},
 		});
-		return new ApiResponse(res, "", me);
+
+		const referrals = db.user.findMany({
+			where: { referredBy: { equals: me.refID } },
+			select: { username: true },
+		});
+
+		return new ApiResponse(res, "", { ...me, referrals });
 	})
 );
 

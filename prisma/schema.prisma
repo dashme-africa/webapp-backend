@@ -120,6 +120,8 @@ model User {
   profilePicture       String?
   state                String?
   username             String
+  refID                String?        @unique
+  referredBy           String?
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
   products             Product[]
