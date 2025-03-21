@@ -37,7 +37,7 @@ router.get(
 			},
 		});
 
-		const referrals = db.user.findMany({
+		const referrals = await db.user.findMany({
 			where: { referredBy: { equals: me.refID } },
 			select: { username: true },
 		});

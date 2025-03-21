@@ -68,4 +68,31 @@ router.get(
 	})
 );
 
+router.get(
+	"/users",
+	Middleware(protectAdmin),
+	Controller(async (req, res) => {
+		/**@type{(import("@prisma/client").User ${referralCount:number})[]} */
+		const users = await db.$queryRaw`
+			SELECT 
+				u.*, 
+				COALESCE(json_agg(r) FILTER (WHERE r.id IS NOT NULL), '[]') AS referrals
+			FROM "User" u
+			LEFT JOIN "User" r ON r."referredBy" = u."refID"
+			GROUP BY u."id";
+		`;
+
+		return new ApiResponse(res, "Users retrieved successfully", users);
+	})
+);
+
 module.exports = router;
+
+// db.$queryRaw`
+// SELECT
+//   u.*,
+//   COALESCE(json_agg(r) FILTER (WHERE r.id IS NOT NULL), '[]') AS referrals
+// FROM "User" u
+// LEFT JOIN "User" r ON r."referredBy" = u."refID"
+// GROUP BY u."id";
+// 		`.then((data) => console.dir(data, { depth: 5 }));
